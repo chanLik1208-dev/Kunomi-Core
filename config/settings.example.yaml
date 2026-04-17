@@ -1,0 +1,64 @@
+# 複製此檔為 settings.yaml 並填入實際值
+# cp config/settings.example.yaml config/settings.yaml
+
+llm:
+  host: "http://192.168.1.XXX:11434"  # 填入 4070 PC 的局域網 IP
+  model: "llama3:8b"
+  timeout: 30
+
+tts:
+  engine: "gpt_sovits"
+  api_url: "http://127.0.0.1:9880"
+
+asr:
+  engine: "faster_whisper"
+  model_size: "medium"
+  language: "zh"
+  push_to_talk_key: "alt"
+
+api:
+  host: "0.0.0.0"
+  port: 8000
+  api_key: "your_secret_key_here"    # 建議設定，留空則停用驗證
+
+discord:
+  token: "your_bot_token_here"
+  command_prefix: "!"
+  notify_channel_id: 123456789
+  allowed_user_ids: [123456789]      # 你的 Discord 使用者 ID
+  notify_throttle_seconds: 30
+
+character:
+  name: "Kunomi"
+  idle_timeout_seconds: 120
+  idle_max_loops: 5
+
+filter:
+  blocked_keywords_file: "config/blocked_keywords.txt"
+  ai_semantic_filter: false          # 穩定後再開啟，會增加 LLM 呼叫次數
+
+vtube_studio:
+  api_url: "ws://192.168.1.XXX:8001" # 4070 PC VTube Studio WebSocket
+  plugin_name: "Kunomi-core"
+  plugin_developer: "you"
+
+pc_agent:
+  host: "http://192.168.1.XXX:8100"
+  api_key: "your_secret_key_here"
+
+vision:
+  model: "llava:7b"
+
+soundboard:
+  sounds_dir: "assets/sounds"
+
+minecraft:
+  log_path: "C:/mc-server/logs/latest.log"
+  poll_interval_seconds: 3
+
+roblox:
+  webhook_secret: "your_roblox_secret"
+
+memory:
+  db_path: "chroma_db"
+  max_events: 500

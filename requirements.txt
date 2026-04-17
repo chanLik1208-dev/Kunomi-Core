@@ -1,0 +1,25 @@
+# ── M4 Mac（主服務）──────────────────────────────────────────────────────────
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+httpx>=0.27.0
+pydantic>=2.7.0
+pyyaml>=6.0.1
+discord.py>=2.3.2
+
+# ASR（第四階段）
+faster-whisper>=1.0.0
+sounddevice>=0.4.6
+pynput>=1.7.6
+numpy>=1.24.0
+
+# VTube Studio 表情控制（第三階段）
+pyvts>=0.3.2
+
+# 長期記憶（第五階段）
+chromadb>=0.5.0
+
+# ── 4070 PC（pc_agent）─────────────────────────────────────────────────────
+# 以下套件只需在 4070 PC 上安裝，M4 Mac 可略過
+# dxcam              # Windows only，pip install dxcam
+# opencv-python      # pip install opencv-python
+# pygame             # 音效播放，pip install pygame

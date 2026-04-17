@@ -1,0 +1,11 @@
+# VTube Studio 表情 ID 對應表
+# 值對應 VTube Studio 內設定的 Expression 名稱
+
+surprised: "Surprised"
+happy:     "Happy"
+angry:     "Angry"
+sad:       "Sad"
+smug:      "Smug"
+neutral:   "Neutral"
+bored:     "Bored"
+disgusted: "Disgusted"
