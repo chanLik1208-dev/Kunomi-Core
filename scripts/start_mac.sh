@@ -6,13 +6,14 @@ set -euo pipefail
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$PROJECT_DIR"
 
-GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
+GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; RED='\033[0;31m'; NC='\033[0m'
 info()  { echo -e "${GREEN}[INFO]${NC}  $*"; }
 warn()  { echo -e "${YELLOW}[WARN]${NC}  $*"; }
 step()  { echo -e "${CYAN}[STEP]${NC}  $*"; }
 
 NO_DISCORD=false
 NO_ASR=false
+DISCORD_PID=""
 for arg in "$@"; do
     case $arg in
         --no-discord) NO_DISCORD=true ;;
@@ -61,7 +62,9 @@ fi
 
 # ── 寫入 PID 檔（方便 stop_mac.sh 停止）─────────────────────────────────────
 echo "$API_PID" > logs/api.pid
-[ "$NO_DISCORD" = false ] && echo "$DISCORD_PID" > logs/discord.pid
+if [ "$NO_DISCORD" = false ] && [ -n "$DISCORD_PID" ]; then
+    echo "$DISCORD_PID" > logs/discord.pid
+fi
 
 # ── 完成 ─────────────────────────────────────────────────────────────────────
 echo ""

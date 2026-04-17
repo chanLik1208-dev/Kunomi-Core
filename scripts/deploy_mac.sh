@@ -13,9 +13,15 @@ error() { echo -e "${RED}[ERROR]${NC} $*"; exit 1; }
 
 # ── 1. Python 版本檢查 ────────────────────────────────────────────────────────
 info "檢查 Python 版本..."
-PYTHON=$(command -v python3 || command -v python || error "找不到 Python，請先安裝 Python 3.11+")
+if command -v python3 &>/dev/null; then
+    PYTHON="python3"
+elif command -v python &>/dev/null; then
+    PYTHON="python"
+else
+    error "找不到 Python，請先安裝 Python 3.11+"
+fi
 PY_VER=$("$PYTHON" -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
-info "Python 版本：$PY_VER（路徑：$PYTHON）"
+info "Python 版本：$PY_VER（路徑：$(command -v $PYTHON)）"
 
 # ── 2. 建立虛擬環境 ───────────────────────────────────────────────────────────
 if [ ! -d ".venv" ]; then
