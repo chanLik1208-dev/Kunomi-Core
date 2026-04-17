@@ -1,0 +1,11 @@
+# 音效板對應表
+# key: 工具呼叫時使用的名稱
+# file: 相對於 soundboard.sounds_dir 的檔名
+
+death:        "death.wav"
+win:          "victory.wav"
+explosion:    "explosion.wav"
+awkward:      "awkward_silence.wav"
+wow:          "wow.wav"
+fail:         "fail.wav"
+levelup:      "levelup.wav"

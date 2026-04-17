@@ -1,0 +1,25 @@
+# 設定檔（含 Token、API Key，不得上傳）
+config/settings.yaml
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+
+# 音效與媒體素材
+*.wav
+*.mp3
+*.mp4
+
+# 截圖暫存
+screenshots/
+
+# 日誌
+*.log
+logs/
+
+# ChromaDB 資料目錄（第五階段）
+chroma_db/
