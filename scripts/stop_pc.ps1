@@ -24,8 +24,7 @@ function Stop-ByPidFile {
     }
 }
 
-Stop-ByPidFile "PC Agent"         "pc_agent"
+Stop-ByPidFile "PC Agent"          "pc_agent"
 Stop-ByPidFile "Minecraft watcher" "mc_watcher"
 
 Info "All PC services stopped."
-Info "Note: Stop Ollama manually via system tray -> Quit"

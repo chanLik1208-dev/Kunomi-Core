@@ -35,6 +35,20 @@ fi
 # ── 建立日誌目錄 ──────────────────────────────────────────────────────────────
 mkdir -p logs
 
+# ── 啟動 Ollama（若未運行）────────────────────────────────────────────────────
+if command -v ollama &>/dev/null; then
+    if ! pgrep -x ollama &>/dev/null; then
+        step "啟動 Ollama..."
+        ollama serve > logs/ollama.log 2>&1 &
+        sleep 2
+        info "Ollama 已啟動，日誌：logs/ollama.log"
+    else
+        info "Ollama 已在運行"
+    fi
+else
+    warn "找不到 ollama 指令，請先安裝：https://ollama.com"
+fi
+
 # ── 啟動 FastAPI 主服務 ───────────────────────────────────────────────────────
 step "啟動 Kunomi-core API 服務..."
 python main.py > logs/api.log 2>&1 &

@@ -1,8 +1,7 @@
-# start_pc.ps1 - Start all services on RTX 4070 PC
-# PowerShell -ExecutionPolicy Bypass -File scripts\start_pc.ps1 [-NoOllama] [-NoMinecraft]
+# start_pc.ps1 - Start all services on Windows PC (pc_agent + STT + Minecraft watcher)
+# PowerShell -ExecutionPolicy Bypass -File scripts\start_pc.ps1 [-NoMinecraft]
 
 param(
-    [switch]$NoOllama,
     [switch]$NoMinecraft
 )
 
@@ -28,24 +27,6 @@ if (-Not (Test-Path "config\settings.yaml")) {
 }
 
 New-Item -ItemType Directory -Force -Path "logs" | Out-Null
-
-# ── Ollama ────────────────────────────────────────────────────────────────────
-if (-Not $NoOllama) {
-    Step "Starting Ollama..."
-    $ollamaProc = Get-Process -Name "ollama" -ErrorAction SilentlyContinue
-    if ($ollamaProc) {
-        Info "Ollama already running (PID: $($ollamaProc.Id))"
-    } else {
-        Start-Process -FilePath "ollama" -ArgumentList "serve" `
-            -RedirectStandardOutput "logs\ollama.log" `
-            -RedirectStandardError "logs\ollama_err.log" `
-            -WindowStyle Hidden
-        Start-Sleep -Seconds 2
-        Info "Ollama started. Log: logs\ollama.log"
-    }
-} else {
-    Warn "Skipping Ollama (-NoOllama)"
-}
 
 # ── PC Agent ──────────────────────────────────────────────────────────────────
 Step "Starting Kunomi PC Agent (port 8100)..."
@@ -91,8 +72,9 @@ if (-Not $NoMinecraft) {
 # ── Done ──────────────────────────────────────────────────────────────────────
 Write-Host ""
 Info "==================================================="
-Info "  4070 PC services started!"
+Info "  PC services started!"
 Info "  PC Agent:  http://localhost:8100"
-Info "  Ollama:    http://localhost:11434"
+Info "  STT:       Hold ALT to record (started by PC Agent)"
+Info "  TTS:       Audio played here (OBS can capture)"
 Info "  Stop:      .\scripts\stop_pc.ps1"
 Info "==================================================="
