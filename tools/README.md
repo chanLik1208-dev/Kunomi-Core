@@ -74,14 +74,14 @@ async def play_sound(name: str):
 - [ ] 建立 `config/soundboard.yaml` 音效對應表
 - [ ] 在 `main.py` import 所有工具模組，確保 `@register_tool` 裝飾器執行
 
-### 第四階段
+### 第四階段 ✅
 
-- [ ] 建立 `tools/vote.py`：`vote_start`（開始投票）、`vote_result`（讀取結果，影響 AI 台詞）
+- [x] 建立 `tools/vote.py`：`vote_start`（開始投票）、`vote_result`（讀取結果，影響 AI 台詞）
 
-### 第五階段
+### 第五階段 ✅
 
-- [ ] 建立 `tools/memory.py`：`memory_save`（存入 ChromaDB）、`memory_query`（語意查詢）
-- [ ] 設計記憶 TTL 策略，避免向量庫無限膨脹
+- [x] 建立 `tools/memory.py`：`memory_save`（存入 ChromaDB）、`memory_query`（語意查詢）
+- [x] 設計記憶 TTL 策略（`max_events` 上限，自動刪除最舊記錄）
 
 ### 架構優化
 

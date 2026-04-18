@@ -62,3 +62,18 @@ roblox:
 memory:
   db_path: "chroma_db"
   max_events: 500
+
+twitch:
+  username: ""                        # Bot 的 Twitch 帳號名稱
+  token: ""                           # OAuth token（格式：oauth:xxxxxxx）
+  channel: ""                         # 要監聽的頻道名稱（不含 #）
+  response_rate: 0.3                  # 每則訊息回應機率（0.0~1.0）
+  min_interval: 8                     # 兩次回應最少間隔秒數
+
+youtube:
+  api_key: ""                         # Google Cloud API Key（需啟用 YouTube Data API v3）
+  live_chat_id: ""                    # 直播 liveChatId（留空則由 video_id 自動取得）
+  video_id: ""                        # 直播影片 ID（用於自動取得 liveChatId）
+  poll_interval: 5                    # 輪詢間隔秒數（建議 >= 5）
+  response_rate: 0.3
+  min_interval: 8

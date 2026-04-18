@@ -89,14 +89,21 @@ uvicorn api.server:app --reload --host 0.0.0.0 --port 8000
 
 ---
 
-## 未來擴充端點（第二階段後）
+## 完整端點一覽
 
 | 方法 | 路徑 | 說明 |
 |------|------|------|
-| `POST` | `/screenshot` | 觸發 DXcam 截圖並送 Vision 模型 |
+| `GET` | `/health` | 健康檢查 |
+| `POST` | `/event` | 觸發遊戲事件 |
+| `POST` | `/chat` | 快速送觀眾留言 |
+| `POST` | `/screenshot` | DXcam 截圖 → Vision 吐槽 |
 | `POST` | `/soundboard/{name}` | 觸發音效板 |
-| `GET` | `/memory/recent` | 查詢最近記憶摘要 |
+| `POST` | `/expression` | 觸發 VTube Studio 表情 |
+| `GET` | `/memory/recent` | 查詢最近 N 筆事件記憶 |
+| `GET` | `/memory/summaries` | 查詢最近 N 次直播總結 |
+| `POST` | `/stream/end` | 觸發今日直播總結並存入 ChromaDB |
 | `POST` | `/vote/start` | 開始觀眾投票（結果僅影響 AI 台詞）|
+| `GET` | `/vote/result` | 取得目前投票結果 |
 
 ## 待辦事項
 
@@ -112,14 +119,18 @@ uvicorn api.server:app --reload --host 0.0.0.0 --port 8000
 - [x] 加入請求 logging（記錄每次事件觸發與回應，方便 debug）
 - [x] 加入全域例外處理，LLM 逾時時回傳友善錯誤訊息（503）而非 500
 
-### 第三階段
+### 第三階段 ✅
 
-- [ ] 實作 `POST /screenshot` 端點（呼叫 `tools/screenshot.py`）
-- [ ] 實作 `POST /soundboard/{name}` 端點
-- [ ] 實作 `POST /expression/{name}` 端點（觸發 VTube Studio 表情）
+- [x] 實作 `POST /screenshot` 端點（呼叫 `tools/screenshot.py`）
+- [x] 實作 `POST /soundboard/{name}` 端點
+- [x] 實作 `POST /expression` 端點（觸發 VTube Studio 表情）
 
-### 第四階段
+### 第四階段 ✅
 
-- [ ] 實作 `POST /vote/start` 與 `GET /vote/result` 端點（僅影響 AI 台詞）
-- [ ] 實作 `GET /memory/recent` 端點（查詢 ChromaDB 最近 N 筆記憶）
-- [ ] 實作 `POST /stream/end` 端點（觸發今日直播總結流程）
+- [x] 實作 `POST /vote/start` 與 `GET /vote/result` 端點（僅影響 AI 台詞）
+- [x] 實作 `GET /memory/recent` 端點（查詢 ChromaDB 最近 N 筆記憶）
+- [x] 實作 `POST /stream/end` 端點（觸發今日直播總結流程）
+
+### 互動工具箱 ✅
+
+- [x] 啟動時自動偵測 twitch.channel / youtube.api_key，建立非同步監聽 Task

@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import time
 import yaml
@@ -76,6 +77,17 @@ class ExpressionRequest(BaseModel):
 async def on_startup():
     start_idle()
     logger.info("Idle State 監控已啟動")
+
+    # 聊天室監聽（設定存在時自動啟動）
+    if _config.get("twitch", {}).get("channel"):
+        from chat.twitch import start as start_twitch
+        asyncio.create_task(start_twitch())
+        logger.info("Twitch 聊天室監聽已啟動")
+
+    if _config.get("youtube", {}).get("api_key"):
+        from chat.youtube import start as start_youtube
+        asyncio.create_task(start_youtube())
+        logger.info("YouTube 聊天室監聽已啟動")
 
 
 # ── 端點 ──────────────────────────────────────────────────────────────────────
@@ -183,3 +195,25 @@ async def memory_summaries(n: int = 3):
     from memory.store import get_recent_summaries
     summaries = get_recent_summaries(n)
     return {"summaries": summaries}
+
+
+# ── 投票 ──────────────────────────────────────────────────────────────────────
+
+class VoteStartRequest(BaseModel):
+    question: str
+    options: list[str]
+    duration: int = 60
+
+
+@app.post("/vote/start", dependencies=[Depends(verify_api_key)])
+async def vote_start(req: VoteStartRequest):
+    """開始觀眾投票，結果僅影響 AI 台詞。"""
+    from tools.vote import vote_start as do_vote_start
+    return await do_vote_start(req.question, req.options, req.duration)
+
+
+@app.get("/vote/result", dependencies=[Depends(verify_api_key)])
+async def vote_result():
+    """取得目前投票結果（進行中或已結束）。"""
+    from tools.vote import vote_result as do_vote_result
+    return await do_vote_result()

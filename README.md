@@ -23,6 +23,7 @@ kunomi-core/
 ├── asr/            Faster-Whisper 語音辨識（按鍵發話）
 ├── idle/           冷場偵測與自言自語迴圈
 ├── memory/         ChromaDB 長期記憶
+├── chat/           聊天室整合（Twitch IRC / YouTube Live）
 └── scripts/        自動化部署與啟停腳本
 ```
 
@@ -87,7 +88,7 @@ bash scripts/health_check.sh
 - [x] 實作 Idle State 冷場偵測（超過 `idle_timeout_seconds` 秒觸發）
 - [x] 自言自語迴圈上限控制（最多 `idle_max_loops` 輪）
 - [x] 說話期間暫停 ASR 監聽（`is_speaking` 旗標）
-- [ ] TTS 說話時自動設 `is_speaking = True`（第五階段 TTS 整合時完成）
+- [x] TTS 說話時自動設 `is_speaking = True`（`tts/speaker.py` 已整合）
 
 ### 第五階段（Memory）✅
 
@@ -97,11 +98,11 @@ bash scripts/health_check.sh
 - [x] 過去總結自動注入 System Prompt（啟動時讀取）
 - [x] 設計記憶保留策略（`max_events` 上限，自動刪除最舊記錄）
 
-### 互動工具箱（節目效果）
+### 互動工具箱（節目效果）✅
 
-- [ ] Twitch 聊天室 API 串接
-- [ ] YouTube Live 聊天室 API 串接
-- [ ] 觀眾投票系統（`tools/vote.py`，僅限投票決定 AI 說話內容，不執行遊戲操作）
+- [x] Twitch 聊天室 API 串接（`chat/twitch.py`）
+- [x] YouTube Live 聊天室 API 串接（`chat/youtube.py`）
+- [x] 觀眾投票系統（`tools/vote.py`，僅限投票決定 AI 說話內容，不執行遊戲操作）
 
 ## API 端點
 
@@ -110,6 +111,14 @@ bash scripts/health_check.sh
 | GET | `/health` | 健康檢查 |
 | POST | `/event` | 觸發遊戲事件（death / win / bug / idle / vision） |
 | POST | `/chat` | 快速測試：送觀眾留言 |
+| POST | `/screenshot` | DXcam 截圖 → Vision 分析 → Kunomi 吐槽 |
+| POST | `/soundboard/{name}` | 觸發音效板 |
+| POST | `/expression` | 觸發 VTube Studio 表情 |
+| GET | `/memory/recent` | 查詢最近 N 筆事件記憶 |
+| GET | `/memory/summaries` | 查詢最近 N 次直播總結 |
+| POST | `/stream/end` | 觸發今日直播總結並存入 ChromaDB |
+| POST | `/vote/start` | 開始觀眾投票（結果僅影響 AI 台詞）|
+| GET | `/vote/result` | 取得目前投票結果 |
 
 ### 範例請求
 
