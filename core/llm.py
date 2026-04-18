@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import httpx
 import yaml
@@ -40,8 +41,17 @@ async def chat(prompt: str, system: str = "") -> str:
 
 
 async def chat_with_event(event_type: str, context: dict = {}) -> str:
-    """根據事件類型組裝 prompt 後送給 LLM。"""
+    """根據事件類型組裝 prompt 後送給 LLM，回應後自動套用 Live2D 情緒參數。"""
     from core.prompt import build_prompt, SYSTEM_PROMPT
     user_prompt = build_prompt(event_type, context)
     logger.debug("觸發事件：%s context=%s", event_type, context)
-    return await chat(prompt=user_prompt, system=SYSTEM_PROMPT)
+    response = await chat(prompt=user_prompt, system=SYSTEM_PROMPT)
+
+    # 回應後非同步套用 Live2D 情緒（VTube Studio 未啟動時靜默略過）
+    try:
+        from tools.live2d import auto_emotion
+        asyncio.create_task(auto_emotion(event_type))
+    except Exception:
+        pass
+
+    return response

@@ -21,6 +21,6 @@ async def dispatch(tool_name: str, args: dict):
 def load_all():
     """匯入所有工具子模組，觸發 @register_tool 裝飾器完成註冊。"""
     import importlib
-    _modules = ["tools.screenshot", "tools.soundboard", "tools.expression", "tools.memory", "tools.vote"]
+    _modules = ["tools.screenshot", "tools.soundboard", "tools.expression", "tools.memory", "tools.vote", "tools.live2d"]
     for mod in _modules:
         importlib.import_module(mod)
