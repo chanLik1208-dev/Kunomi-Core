@@ -2,8 +2,8 @@ import logging
 import httpx
 import yaml
 from pathlib import Path
-from fastapi import FastAPI, HTTPException, Request, Depends
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, HTTPException, Request, Depends, WebSocket, WebSocketDisconnect
+from fastapi.responses import JSONResponse, HTMLResponse
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
@@ -119,6 +119,13 @@ async def tts_play(request: Request):
 
         pygame.mixer.music.load(tmp_path)
         pygame.mixer.music.play()
+
+        # push subtitle before playback
+        subtitle_text = request.headers.get("X-Subtitle-Text", "")
+        if subtitle_text:
+            from pc_agent.subtitle import broadcast
+            asyncio.create_task(broadcast(subtitle_text))
+
         while pygame.mixer.music.get_busy():
             await asyncio.sleep(0.05)
         pygame.mixer.music.unload()
@@ -129,6 +136,25 @@ async def tts_play(request: Request):
 
     logger.info("TTS played (%d bytes, %s)", len(audio_bytes), suffix)
     return {"status": "played", "bytes": len(audio_bytes)}
+
+
+# ── 字幕 ──────────────────────────────────────────────────────────────────────
+
+@app.get("/subtitle", response_class=HTMLResponse, include_in_schema=False)
+async def subtitle_page():
+    from pc_agent.subtitle import _HTML
+    return HTMLResponse(content=_HTML)
+
+
+@app.websocket("/subtitle/ws")
+async def subtitle_ws(websocket: WebSocket):
+    from pc_agent.subtitle import connect, disconnect
+    await connect(websocket)
+    try:
+        while True:
+            await websocket.receive_text()  # keep alive
+    except WebSocketDisconnect:
+        disconnect(websocket)
 
 
 # ── VTube Studio ─────────────────────────────────────────────────────────────
