@@ -55,7 +55,6 @@ if (-Not (Test-Path "config\settings.yaml")) {
     Info "Copying settings template..."
     Copy-Item "config\settings.example.yaml" "config\settings.yaml"
     Warn "Please edit config\settings.yaml:"
-    Warn "  llm.host         -> 127.0.0.1 (local Ollama)"
     Warn "  api.api_key      -> same key as M4 Mac"
     Warn "  pc_agent.api_key -> any secret string"
     Warn "  minecraft.log_path -> path to latest.log (optional)"
@@ -67,22 +66,7 @@ if (-Not (Test-Path "config\settings.yaml")) {
 Info "Creating required directories..."
 New-Item -ItemType Directory -Force -Path "screenshots","logs","assets\sounds" | Out-Null
 
-# ── 7. Ollama check ───────────────────────────────────────────────────────────
-Info "Checking Ollama..."
-$ErrorActionPreference = "Continue"
-$ollamaCheck = & ollama --version 2>&1
-$ollamaExit = $LASTEXITCODE
-$ErrorActionPreference = "Stop"
-if ($ollamaExit -eq 0) {
-    Info "Ollama: $ollamaCheck"
-} else {
-    Warn "Ollama not found or not in PATH"
-    Warn "Download from: https://ollama.com"
-    Warn "After install, run: ollama pull llama3:8b"
-    Warn "Then run:           ollama pull llava:7b"
-}
-
-# ── 8. Firewall rule (port 8100) ──────────────────────────────────────────────
+# ── 7. Firewall rule (port 8100) ──────────────────────────────────────────────
 Info "Setting firewall rule (port 8100)..."
 $ruleName = "Kunomi-PC-Agent"
 $existing = Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue
@@ -104,9 +88,7 @@ Write-Host ""
 Info "==================================================="
 Info "  4070 PC deployment complete!"
 Info "  Next steps:"
-Info "  1. Edit config\settings.yaml"
-Info "  2. Run: ollama pull llama3:8b"
-Info "  3. Run: ollama pull llava:7b"
-Info "  4. Put sound files in assets\sounds\"
-Info "  5. Run: .\scripts\start_pc.ps1"
+Info "  1. Edit config\settings.yaml (api_key / pc_agent.api_key)"
+Info "  2. Put sound files in assets\sounds\"
+Info "  3. Run: .\scripts\start_pc.ps1"
 Info "==================================================="

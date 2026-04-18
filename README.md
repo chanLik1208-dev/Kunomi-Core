@@ -6,8 +6,8 @@ AI VTuber 直播助理系統，驅動冷血毒舌貓耳少女「Kunomi」。
 
 | 機器 | 負責模組 |
 |------|---------|
-| RTX 4070 PC | Ollama LLM、DXcam 截圖、VTube Studio |
-| M4 Mac (16GB) | FastAPI 控制台、GPT-SoVITS TTS、Faster-Whisper ASR、ChromaDB |
+| M4 Mac (16GB) | FastAPI 控制台、Ollama LLM、GPT-SoVITS TTS、Faster-Whisper ASR、ChromaDB、Discord/Twitch/YouTube |
+| RTX 4070 PC（輕量）| pc_agent、DXcam 截圖、VTube Studio 表情、音效播放、Minecraft log 讀取 |
 
 ## 專案結構
 

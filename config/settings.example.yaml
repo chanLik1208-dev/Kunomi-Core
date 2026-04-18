@@ -2,7 +2,7 @@
 # cp config/settings.example.yaml config/settings.yaml
 
 llm:
-  host: "http://192.168.1.XXX:11434"  # 填入 4070 PC 的局域網 IP
+  host: "http://127.0.0.1:11434"      # Ollama 在 Mac 本機執行
   model: "llama3:8b"
   timeout: 30
 
