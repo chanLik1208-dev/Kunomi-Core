@@ -88,55 +88,54 @@ async def screenshot():
 
 @app.post("/tts/play", dependencies=[Depends(verify_key)])
 async def tts_play(request: Request):
-    """接收 Mac 傳來的 WAV bytes，在 Windows 本地播放（OBS 可擷取）。阻塞至播放完畢。"""
+    """Receive audio bytes (WAV or MP3) from Mac and play locally via pygame."""
     import io
-    import threading
-    import wave
-    import numpy as np
-    import sounddevice as sd
+    import asyncio
+    import pygame
     import pc_agent.asr as asr_mod
 
     audio_bytes = await request.body()
     if not audio_bytes:
         raise HTTPException(status_code=400, detail="empty audio body")
 
-    # 播放前暫停 ASR，防止 AI 錄到自己的聲音
     asr_mod.is_speaking = True
     try:
-        with wave.open(io.BytesIO(audio_bytes)) as wf:
-            sample_rate = wf.getframerate()
-            n_channels = wf.getnchannels()
-            raw = wf.readframes(wf.getnframes())
-
-        audio_np = np.frombuffer(raw, dtype=np.int16).astype(np.float32) / 32768.0
-        if n_channels > 1:
-            audio_np = audio_np.reshape(-1, n_channels)
-
-        done = threading.Event()
-
-        def _callback(outdata, frames, _time, _status):
-            nonlocal audio_np
-            chunk = audio_np[:frames]
-            if len(chunk) < frames:
-                outdata[:len(chunk)] = chunk.reshape(-1, 1) if audio_np.ndim == 1 else chunk
-                outdata[len(chunk):] = 0
-                raise sd.CallbackStop()
-            outdata[:] = chunk.reshape(-1, 1) if audio_np.ndim == 1 else chunk
-            audio_np = audio_np[frames:]
-
-        with sd.OutputStream(
-            samplerate=sample_rate,
-            channels=n_channels,
-            dtype="float32",
-            callback=_callback,
-            finished_callback=done.set,
-        ):
-            done.wait()
+        if not pygame.mixer.get_init():
+            pygame.mixer.init()
+        sound = pygame.mixer.Sound(io.BytesIO(audio_bytes))
+        channel = sound.play()
+        # block until playback finishes
+        while channel and channel.get_busy():
+            await asyncio.sleep(0.05)
     finally:
         asr_mod.is_speaking = False
 
-    logger.info("TTS 播放完畢（%d bytes）", len(audio_bytes))
+    logger.info("TTS played (%d bytes)", len(audio_bytes))
     return {"status": "played", "bytes": len(audio_bytes)}
+
+
+# ── VTube Studio ─────────────────────────────────────────────────────────────
+
+class VtsEmotionRequest(BaseModel):
+    emotion: str
+
+class VtsExpressionRequest(BaseModel):
+    name: str
+    duration_seconds: float = 2.0
+
+
+@app.post("/vts/emotion", dependencies=[Depends(verify_key)])
+async def vts_emotion(req: VtsEmotionRequest):
+    """Set Live2D emotion via parameter injection (VTS runs locally on PC)."""
+    from pc_agent.vts import set_emotion
+    return await set_emotion(req.emotion)
+
+
+@app.post("/vts/expression", dependencies=[Depends(verify_key)])
+async def vts_expression(req: VtsExpressionRequest):
+    """Trigger a VTube Studio expression."""
+    from pc_agent.vts import set_expression
+    return await set_expression(req.name, req.duration_seconds)
 
 
 # ── 音效板 ────────────────────────────────────────────────────────────────────

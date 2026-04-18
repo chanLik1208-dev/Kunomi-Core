@@ -35,8 +35,8 @@ python -m pip install --upgrade pip -q
 python -m pip install fastapi "uvicorn[standard]" httpx pyyaml -q
 
 # ── 4. PC-only dependencies ───────────────────────────────────────────────────
-Info "Installing PC-only dependencies (opencv / pygame / sounddevice / pynput)..."
-python -m pip install opencv-python pygame sounddevice numpy pynput -q
+Info "Installing PC-only dependencies (opencv / pygame / sounddevice / pynput / pyvts)..."
+python -m pip install opencv-python pygame sounddevice numpy pynput pyvts -q
 
 Info "Installing Faster-Whisper (STT)..."
 python -m pip install faster-whisper -q
