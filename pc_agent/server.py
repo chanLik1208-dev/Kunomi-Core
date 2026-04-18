@@ -76,6 +76,55 @@ async def screenshot():
     }
 
 
+# ── TTS 播放 ──────────────────────────────────────────────────────────────────
+
+@app.post("/tts/play", dependencies=[Depends(verify_key)])
+async def tts_play(request: Request):
+    """接收 Mac 傳來的 WAV bytes，在 Windows 本地播放（OBS 可擷取）。阻塞至播放完畢。"""
+    import io
+    import threading
+    import wave
+    import numpy as np
+    import sounddevice as sd
+
+    audio_bytes = await request.body()
+    if not audio_bytes:
+        raise HTTPException(status_code=400, detail="empty audio body")
+
+    with wave.open(io.BytesIO(audio_bytes)) as wf:
+        sample_rate = wf.getframerate()
+        n_channels = wf.getnchannels()
+        raw = wf.readframes(wf.getnframes())
+
+    audio_np = np.frombuffer(raw, dtype=np.int16).astype(np.float32) / 32768.0
+    if n_channels > 1:
+        audio_np = audio_np.reshape(-1, n_channels)
+
+    done = threading.Event()
+
+    def _callback(outdata, frames, _time, _status):
+        nonlocal audio_np
+        chunk = audio_np[:frames]
+        if len(chunk) < frames:
+            outdata[:len(chunk)] = chunk.reshape(-1, 1) if audio_np.ndim == 1 else chunk
+            outdata[len(chunk):] = 0
+            raise sd.CallbackStop()
+        outdata[:] = chunk.reshape(-1, 1) if audio_np.ndim == 1 else chunk
+        audio_np = audio_np[frames:]
+
+    with sd.OutputStream(
+        samplerate=sample_rate,
+        channels=n_channels,
+        dtype="float32",
+        callback=_callback,
+        finished_callback=done.set,
+    ):
+        done.wait()
+
+    logger.info("TTS 播放完畢（%d bytes）", len(audio_bytes))
+    return {"status": "played", "bytes": len(audio_bytes)}
+
+
 # ── 音效板 ────────────────────────────────────────────────────────────────────
 
 @app.post("/soundboard/{name}", dependencies=[Depends(verify_key)])
