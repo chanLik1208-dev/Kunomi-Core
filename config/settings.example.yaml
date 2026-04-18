@@ -7,8 +7,8 @@ llm:
   timeout: 30
 
 tts:
-  engine: "gpt_sovits"
-  api_url: "http://127.0.0.1:9880"
+  api_url: ""            # GPT-SoVITS URL (e.g. http://127.0.0.1:9880), leave empty to use edge-tts
+  edge_voice: "zh-TW-HsiaoChenNeural"  # edge-tts voice, used when api_url is empty
 
 asr:
   engine: "faster_whisper"

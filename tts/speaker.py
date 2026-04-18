@@ -1,12 +1,12 @@
 """
-GPT-SoVITS TTS 模組（M4 Mac）。
+TTS 模組（M4 Mac）。
 
-說話流程：
-  1. 設 asr.listener.is_speaking = True（暫停 ASR 錄音，防回音）
-  2. 呼叫 GPT-SoVITS API 取得音訊 bytes
-  3. POST 音訊到 Windows pc_agent /tts/play → 由 PC 本地播放（OBS 可擷取）
-  4. 播放結束後設 is_speaking = False（恢復 ASR 監聽）
+優先使用 GPT-SoVITS（config tts.api_url 有設定時）；
+否則 fallback 到 edge-tts（免安裝雲端合成，zh-TW 女聲）。
+
+合成後 POST WAV bytes 到 Windows pc_agent /tts/play 播放（OBS 可擷取）。
 """
+import io
 import logging
 import httpx
 import yaml
@@ -15,47 +15,68 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 _config = yaml.safe_load(Path("config/settings.yaml").read_text(encoding="utf-8"))
-_TTS_URL: str = _config.get("tts", {}).get("api_url", "http://127.0.0.1:9880")
-_PC_AGENT: str = _config.get("pc_agent", {}).get("host", "http://127.0.0.1:8100")
+_tts_cfg   = _config.get("tts", {})
+_TTS_URL: str = _tts_cfg.get("api_url", "")          # 空字串 = 不用 GPT-SoVITS
+_VOICE: str   = _tts_cfg.get("edge_voice", "zh-TW-HsiaoChenNeural")
+_PC_AGENT: str   = _config.get("pc_agent", {}).get("host", "http://127.0.0.1:8100")
 _PC_API_KEY: str = _config.get("pc_agent", {}).get("api_key", "")
+
+
+async def _synthesize_edge(text: str) -> bytes:
+    """edge-tts 合成，回傳 MP3 bytes（pc_agent sounddevice 可播放）。"""
+    import edge_tts
+    buf = io.BytesIO()
+    communicate = edge_tts.Communicate(text, _VOICE)
+    async for chunk in communicate.stream():
+        if chunk["type"] == "audio":
+            buf.write(chunk["data"])
+    buf.seek(0)
+    return buf.read()
+
+
+async def _synthesize_gptsovits(text: str) -> bytes:
+    """GPT-SoVITS 合成，回傳 WAV bytes。"""
+    async with httpx.AsyncClient(timeout=30) as client:
+        resp = await client.get(_TTS_URL, params={"text": text, "text_language": "zh"})
+        resp.raise_for_status()
+    return resp.content
+
+
+async def _post_to_pc(audio_bytes: bytes, content_type: str) -> None:
+    """POST 音訊到 Windows pc_agent /tts/play，阻塞至播放完畢。"""
+    headers: dict = {"Content-Type": content_type}
+    if _PC_API_KEY:
+        headers["X-API-Key"] = _PC_API_KEY
+    async with httpx.AsyncClient(timeout=60) as client:
+        resp = await client.post(f"{_PC_AGENT}/tts/play", content=audio_bytes, headers=headers)
+        resp.raise_for_status()
 
 
 async def speak(text: str) -> bool:
     """
-    合成語音並送到 Windows pc_agent 播放，阻塞至 pc_agent 回應（播放完畢）。
-    is_speaking 旗標由 pc_agent /tts/play 端點在 PC 本地管理。
+    合成語音並送到 Windows pc_agent 播放。
     回傳 True 表示成功，False 表示服務不可用（靜默略過）。
     """
     if not text.strip():
         return True
 
     try:
-        # 1. 向 GPT-SoVITS 取得音訊 bytes
-        async with httpx.AsyncClient(timeout=30) as client:
-            tts_resp = await client.get(
-                _TTS_URL,
-                params={"text": text, "text_language": "zh"},
-            )
-            tts_resp.raise_for_status()
+        if _TTS_URL:
+            audio = await _synthesize_gptsovits(text)
+            ctype = "audio/wav"
+            logger.debug("TTS: GPT-SoVITS")
+        else:
+            audio = await _synthesize_edge(text)
+            ctype = "audio/mpeg"
+            logger.debug("TTS: edge-tts voice=%s", _VOICE)
 
-        audio_bytes = tts_resp.content
-
-        # 2. POST 音訊到 Windows pc_agent 播放（阻塞至播完）
-        headers = {"X-API-Key": _PC_API_KEY} if _PC_API_KEY else {}
-        async with httpx.AsyncClient(timeout=60) as client:
-            play_resp = await client.post(
-                f"{_PC_AGENT}/tts/play",
-                content=audio_bytes,
-                headers={**headers, "Content-Type": "audio/wav"},
-            )
-            play_resp.raise_for_status()
-
-        logger.info("TTS 播放完畢：%s", text[:40])
+        await _post_to_pc(audio, ctype)
+        logger.info("TTS done: %s", text[:50])
         return True
 
     except httpx.ConnectError as e:
-        logger.warning("TTS 或 PC Agent 連線失敗（%s），跳過語音合成", e)
+        logger.warning("TTS/PC Agent connection failed (%s), skipping", e)
         return False
     except Exception as e:
-        logger.error("TTS 合成/播放失敗：%s", e)
+        logger.error("TTS failed: %s", e)
         return False
