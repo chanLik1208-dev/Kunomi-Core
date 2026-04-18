@@ -36,7 +36,10 @@ Info "Installing PC-only dependencies (opencv / pygame)..."
 python -m pip install opencv-python pygame -q
 
 # dxcam check
-$dxcamResult = & python -c "import dxcam; print('ok')" 2>&1 ; $dxcamExit = $LASTEXITCODE
+$ErrorActionPreference = "Continue"
+$dxcamResult = & python -c "import dxcam; print('ok')" 2>&1
+$dxcamExit = $LASTEXITCODE
+$ErrorActionPreference = "Stop"
 if ($dxcamExit -eq 0 -and "$dxcamResult".Trim() -eq "ok") {
     Info "dxcam already installed"
 } else {
