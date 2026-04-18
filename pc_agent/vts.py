@@ -11,7 +11,20 @@ logger = logging.getLogger(__name__)
 
 _config = yaml.safe_load(Path("config/settings.yaml").read_text(encoding="utf-8"))
 _VTS_CFG = _config.get("vtube_studio", {})
-_PORT: int = _VTS_CFG.get("port", 8001)
+
+def _parse_port() -> int:
+    # support both vtube_studio.port and vtube_studio.api_url
+    if "port" in _VTS_CFG:
+        return int(_VTS_CFG["port"])
+    url = _VTS_CFG.get("api_url", "")
+    if url:
+        try:
+            return int(url.rstrip("/").rsplit(":", 1)[-1])
+        except (ValueError, IndexError):
+            pass
+    return 8001
+
+_PORT: int = _parse_port()
 
 _PARAMS: dict = yaml.safe_load(
     Path("config/live2d_params.yaml").read_text(encoding="utf-8")
