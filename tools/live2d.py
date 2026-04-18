@@ -38,15 +38,19 @@ async def _get_vts():
         raise RuntimeError("pyvts 未安裝，請執行 pip install pyvts")
 
     plugin_info = {
-        "plugin_name": _VTS_CFG.get("plugin_name", "Kunomi-core"),
+        "name": _VTS_CFG.get("plugin_name", "Kunomi-core"),
         "developer": _VTS_CFG.get("plugin_developer", "dev"),
     }
     vts = pyvts.vts(plugin_info=plugin_info, vts_api_info={"port": 8001})
-    await vts.connect()
-    await vts.request_authenticate_token()
-    await vts.request_authenticate()
+    try:
+        await vts.connect()
+        await vts.request_authenticate_token()
+        await vts.request_authenticate()
+    except Exception:
+        _vts_client = None
+        raise
     _vts_client = vts
-    logger.info("VTube Studio 已連線（Live2D 參數模式）")
+    logger.info("VTube Studio connected (Live2D param mode)")
     return vts
 
 

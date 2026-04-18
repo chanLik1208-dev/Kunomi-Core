@@ -62,9 +62,14 @@ async def speak(text: str) -> bool:
 
     try:
         if _TTS_URL:
-            audio = await _synthesize_gptsovits(text)
-            ctype = "audio/wav"
-            logger.debug("TTS: GPT-SoVITS")
+            try:
+                audio = await _synthesize_gptsovits(text)
+                ctype = "audio/wav"
+                logger.debug("TTS: GPT-SoVITS")
+            except Exception as e:
+                logger.warning("TTS: GPT-SoVITS failed (%s), falling back to edge-tts", e)
+                audio = await _synthesize_edge(text)
+                ctype = "audio/mpeg"
         else:
             audio = await _synthesize_edge(text)
             ctype = "audio/mpeg"

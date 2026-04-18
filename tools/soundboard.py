@@ -18,9 +18,15 @@ async def play_sound(name: str) -> dict:
     觸發 4070 PC 播放音效。
     name 對應 config/soundboard.yaml 的 key（death / win / explosion 等）。
     """
-    async with httpx.AsyncClient(timeout=10) as client:
-        resp = await client.post(f"{_PC}/soundboard/{name}", headers=_HEADERS)
-        resp.raise_for_status()
-
-    logger.info("音效板：%s", name)
-    return resp.json()
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.post(f"{_PC}/soundboard/{name}", headers=_HEADERS)
+            resp.raise_for_status()
+        logger.info("soundboard: %s", name)
+        return resp.json()
+    except httpx.ConnectError:
+        logger.warning("soundboard: PC Agent not reachable, skipping %s", name)
+        return {"status": "skipped", "reason": "PC Agent offline"}
+    except Exception as e:
+        logger.warning("soundboard: %s failed: %s", name, e)
+        return {"status": "error", "reason": str(e)}
