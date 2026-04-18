@@ -12,12 +12,10 @@ logging.basicConfig(
 config = yaml.safe_load(Path("config/settings.yaml").read_text(encoding="utf-8"))
 
 from tools import load_all
-from asr.listener import start as start_asr
 
 load_all()
 
 if __name__ == "__main__":
-    start_asr()
     uvicorn.run(
         "api.server:app",
         host=config["api"]["host"],

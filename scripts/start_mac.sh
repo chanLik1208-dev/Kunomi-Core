@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # start_mac.sh — M4 Mac 啟動所有服務
-# 用法：bash scripts/start_mac.sh [--no-discord] [--no-asr]
+# 用法：bash scripts/start_mac.sh [--no-discord]
 set -euo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
@@ -12,12 +12,10 @@ warn()  { echo -e "${YELLOW}[WARN]${NC}  $*"; }
 step()  { echo -e "${CYAN}[STEP]${NC}  $*"; }
 
 NO_DISCORD=false
-NO_ASR=false
 DISCORD_PID=""
 for arg in "$@"; do
     case $arg in
         --no-discord) NO_DISCORD=true ;;
-        --no-asr)     NO_ASR=true ;;
     esac
 done
 
@@ -73,9 +71,7 @@ info "  Kunomi-core 已啟動！"
 info "  API：    http://localhost:8000/docs"
 info "  健康：   curl http://localhost:8000/health"
 info "  停止：   bash scripts/stop_mac.sh"
-if [ "$NO_ASR" = false ]; then
-    info "  ASR：    按住 ALT 鍵開始錄音"
-fi
+info "  ASR：    在 Windows PC 上按住 ALT 鍵錄音"
 info "═══════════════════════════════════════════════════"
 
 # 保持前景運行（Ctrl+C 停止所有服務）

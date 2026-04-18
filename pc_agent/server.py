@@ -19,6 +19,14 @@ _LLM_HOST: str = _config["llm"]["host"]
 app = FastAPI(title="Kunomi PC Agent")
 
 
+@app.on_event("startup")
+async def on_startup():
+    if _config.get("asr", {}).get("push_to_talk_key"):
+        from pc_agent.asr import start as start_asr
+        start_asr()
+        logger.info("ASR 按鍵發話已啟動")
+
+
 async def verify_key(request: Request):
     if not _API_KEY:
         return
@@ -86,40 +94,46 @@ async def tts_play(request: Request):
     import wave
     import numpy as np
     import sounddevice as sd
+    import pc_agent.asr as asr_mod
 
     audio_bytes = await request.body()
     if not audio_bytes:
         raise HTTPException(status_code=400, detail="empty audio body")
 
-    with wave.open(io.BytesIO(audio_bytes)) as wf:
-        sample_rate = wf.getframerate()
-        n_channels = wf.getnchannels()
-        raw = wf.readframes(wf.getnframes())
+    # 播放前暫停 ASR，防止 AI 錄到自己的聲音
+    asr_mod.is_speaking = True
+    try:
+        with wave.open(io.BytesIO(audio_bytes)) as wf:
+            sample_rate = wf.getframerate()
+            n_channels = wf.getnchannels()
+            raw = wf.readframes(wf.getnframes())
 
-    audio_np = np.frombuffer(raw, dtype=np.int16).astype(np.float32) / 32768.0
-    if n_channels > 1:
-        audio_np = audio_np.reshape(-1, n_channels)
+        audio_np = np.frombuffer(raw, dtype=np.int16).astype(np.float32) / 32768.0
+        if n_channels > 1:
+            audio_np = audio_np.reshape(-1, n_channels)
 
-    done = threading.Event()
+        done = threading.Event()
 
-    def _callback(outdata, frames, _time, _status):
-        nonlocal audio_np
-        chunk = audio_np[:frames]
-        if len(chunk) < frames:
-            outdata[:len(chunk)] = chunk.reshape(-1, 1) if audio_np.ndim == 1 else chunk
-            outdata[len(chunk):] = 0
-            raise sd.CallbackStop()
-        outdata[:] = chunk.reshape(-1, 1) if audio_np.ndim == 1 else chunk
-        audio_np = audio_np[frames:]
+        def _callback(outdata, frames, _time, _status):
+            nonlocal audio_np
+            chunk = audio_np[:frames]
+            if len(chunk) < frames:
+                outdata[:len(chunk)] = chunk.reshape(-1, 1) if audio_np.ndim == 1 else chunk
+                outdata[len(chunk):] = 0
+                raise sd.CallbackStop()
+            outdata[:] = chunk.reshape(-1, 1) if audio_np.ndim == 1 else chunk
+            audio_np = audio_np[frames:]
 
-    with sd.OutputStream(
-        samplerate=sample_rate,
-        channels=n_channels,
-        dtype="float32",
-        callback=_callback,
-        finished_callback=done.set,
-    ):
-        done.wait()
+        with sd.OutputStream(
+            samplerate=sample_rate,
+            channels=n_channels,
+            dtype="float32",
+            callback=_callback,
+            finished_callback=done.set,
+        ):
+            done.wait()
+    finally:
+        asr_mod.is_speaking = False
 
     logger.info("TTS 播放完畢（%d bytes）", len(audio_bytes))
     return {"status": "played", "bytes": len(audio_bytes)}

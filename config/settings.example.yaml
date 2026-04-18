@@ -20,6 +20,7 @@ api:
   host: "0.0.0.0"
   port: 8000
   api_key: "your_secret_key_here"    # 建議設定，留空則停用驗證
+  mac_host: "http://192.168.1.XXX:8000"  # PC 呼叫 Mac 用，填入 Mac 的局域網 IP
 
 discord:
   token: "your_bot_token_here"
