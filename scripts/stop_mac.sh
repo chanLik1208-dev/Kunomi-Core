@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # stop_mac.sh — 停止 M4 Mac 上所有 Kunomi 服務
-set -euo pipefail
+set -eu
+set -o pipefail 2>/dev/null || true
 
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$PROJECT_DIR"
@@ -17,13 +18,13 @@ stop_pid() {
         pid=$(cat "$pidfile")
         if kill -0 "$pid" 2>/dev/null; then
             kill "$pid"
-            info "$name 已停止（PID: $pid）"
+            info "${name} stopped (PID: ${pid})"
         else
-            warn "$name 已不在運行（PID: $pid）"
+            warn "${name} not running (PID: ${pid})"
         fi
         rm -f "$pidfile"
     else
-        warn "找不到 $name PID 檔（$pidfile）"
+        warn "${name} PID file not found: ${pidfile}"
     fi
 }
 
