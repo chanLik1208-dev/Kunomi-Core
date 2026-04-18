@@ -1,9 +1,5 @@
-# start_pc.ps1 - Start all services on Windows PC (pc_agent + STT + Minecraft watcher)
-# PowerShell -ExecutionPolicy Bypass -File scripts\start_pc.ps1 [-NoMinecraft]
-
-param(
-    [switch]$NoMinecraft
-)
+# start_pc.ps1 - Start Kunomi PC Agent (TTS playback + STT)
+# PowerShell -ExecutionPolicy Bypass -File scripts\start_pc.ps1
 
 $ErrorActionPreference = "Stop"
 $ProjectDir = Split-Path -Parent $PSScriptRoot
@@ -46,29 +42,6 @@ try {
     Info "PC Agent health check: OK"
 } catch {
     Warn "PC Agent health check failed. Check logs\pc_agent.log"
-}
-
-# ── Minecraft log watcher ─────────────────────────────────────────────────────
-if (-Not $NoMinecraft) {
-    $logPathLine = Select-String -Path "config\settings.yaml" -Pattern "log_path" | Select-Object -First 1
-    $hasLogPath = $logPathLine -and $logPathLine.Line -notmatch '""' -and $logPathLine.Line -notmatch "''"
-
-    if ($hasLogPath) {
-        Step "Starting Minecraft log watcher..."
-        $mcWatcher = Start-Process -FilePath "python" `
-            -ArgumentList "-c","from perception.minecraft import start; import time; start(); time.sleep(86400)" `
-            -WorkingDirectory $ProjectDir `
-            -RedirectStandardOutput "$ProjectDir\logs\mc_watcher.log" `
-            -RedirectStandardError "$ProjectDir\logs\mc_watcher_err.log" `
-            -WindowStyle Hidden `
-            -PassThru
-        $mcWatcher.Id | Out-File "logs\mc_watcher.pid" -Encoding ASCII
-        Info "Minecraft watcher started (PID: $($mcWatcher.Id))"
-    } else {
-        Warn "minecraft.log_path not set, skipping log watcher"
-    }
-} else {
-    Warn "Skipping Minecraft watcher (-NoMinecraft)"
 }
 
 # ── Done ──────────────────────────────────────────────────────────────────────

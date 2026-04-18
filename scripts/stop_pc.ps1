@@ -1,4 +1,4 @@
-# stop_pc.ps1 - Stop all Kunomi services on 4070 PC
+# stop_pc.ps1 - Stop all Kunomi services on PC
 
 $ProjectDir = Split-Path -Parent $PSScriptRoot
 Set-Location $ProjectDir
@@ -24,7 +24,6 @@ function Stop-ByPidFile {
     }
 }
 
-Stop-ByPidFile "PC Agent"          "pc_agent"
-Stop-ByPidFile "Minecraft watcher" "mc_watcher"
+Stop-ByPidFile "PC Agent" "pc_agent"
 
 Info "All PC services stopped."
