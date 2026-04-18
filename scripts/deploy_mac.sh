@@ -21,7 +21,7 @@ elif command -v python &>/dev/null; then
 else
     error "找不到 Python，請先安裝 Python 3.11+"
 fi
-PY_VER=$("$PYTHON" -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
+PY_VER=$("$PYTHON" -c 'import sys; print(str(sys.version_info.major)+"."+str(sys.version_info.minor))')
 info "Python 版本：$PY_VER（路徑：$(command -v $PYTHON)）"
 
 # ── 2. 建立虛擬環境 ───────────────────────────────────────────────────────────
