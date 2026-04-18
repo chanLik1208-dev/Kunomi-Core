@@ -121,7 +121,8 @@ async def tts_play(request: Request):
         pygame.mixer.music.play()
 
         # push subtitle before playback
-        subtitle_text = request.headers.get("X-Subtitle-Text", "")
+        from urllib.parse import unquote
+        subtitle_text = unquote(request.headers.get("X-Subtitle-Text", ""))
         if subtitle_text:
             from pc_agent.subtitle import broadcast
             asyncio.create_task(broadcast(subtitle_text))

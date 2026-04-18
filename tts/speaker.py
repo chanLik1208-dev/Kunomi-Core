@@ -85,7 +85,8 @@ async def _synthesize_and_play(text: str) -> None:
         audio = await _synthesize_edge(text)
         ctype = "audio/mpeg"
 
-    headers: dict = {"Content-Type": ctype, "X-Subtitle-Text": text}
+    from urllib.parse import quote
+    headers: dict = {"Content-Type": ctype, "X-Subtitle-Text": quote(text)}
     if _PC_API_KEY:
         headers["X-API-Key"] = _PC_API_KEY
 
