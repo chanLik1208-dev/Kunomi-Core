@@ -19,6 +19,11 @@ _LLM_HOST: str = _config["llm"]["host"]
 app = FastAPI(title="Kunomi PC Agent")
 
 
+@app.get("/health")
+async def health():
+    return {"status": "ok", "service": "pc_agent"}
+
+
 @app.on_event("startup")
 async def on_startup():
     if _config.get("asr", {}).get("push_to_talk_key"):
@@ -89,8 +94,9 @@ async def screenshot():
 @app.post("/tts/play", dependencies=[Depends(verify_key)])
 async def tts_play(request: Request):
     """Receive audio bytes (WAV or MP3) from Mac and play locally via pygame."""
-    import io
     import asyncio
+    import os
+    import tempfile
     import pygame
     import pc_agent.asr as asr_mod
 
@@ -98,19 +104,30 @@ async def tts_play(request: Request):
     if not audio_bytes:
         raise HTTPException(status_code=400, detail="empty audio body")
 
+    # detect format by magic bytes
+    suffix = ".wav" if audio_bytes[:4] == b"RIFF" else ".mp3"
+
     asr_mod.is_speaking = True
+    tmp_path = None
     try:
         if not pygame.mixer.get_init():
-            pygame.mixer.init()
-        sound = pygame.mixer.Sound(io.BytesIO(audio_bytes))
-        channel = sound.play()
-        # block until playback finishes
-        while channel and channel.get_busy():
+            pygame.mixer.init(frequency=44100)
+
+        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as f:
+            f.write(audio_bytes)
+            tmp_path = f.name
+
+        pygame.mixer.music.load(tmp_path)
+        pygame.mixer.music.play()
+        while pygame.mixer.music.get_busy():
             await asyncio.sleep(0.05)
+        pygame.mixer.music.unload()
     finally:
         asr_mod.is_speaking = False
+        if tmp_path and os.path.exists(tmp_path):
+            os.unlink(tmp_path)
 
-    logger.info("TTS played (%d bytes)", len(audio_bytes))
+    logger.info("TTS played (%d bytes, %s)", len(audio_bytes), suffix)
     return {"status": "played", "bytes": len(audio_bytes)}
 
 
