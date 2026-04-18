@@ -1,6 +1,10 @@
 """
 VTube Studio control module for PC Agent.
 Runs on Windows PC where VTube Studio is localhost.
+
+pyvts API used:
+- requestSetMultiParameterValue(parameters, values) — Live2D param injection
+- requestTriggerHotKey(hotkeyID) — expression activation via VTS hotkey
 """
 import asyncio
 import logging
@@ -12,8 +16,8 @@ logger = logging.getLogger(__name__)
 _config = yaml.safe_load(Path("config/settings.yaml").read_text(encoding="utf-8"))
 _VTS_CFG = _config.get("vtube_studio", {})
 
+
 def _parse_port() -> int:
-    # support both vtube_studio.port and vtube_studio.api_url
     if "port" in _VTS_CFG:
         return int(_VTS_CFG["port"])
     url = _VTS_CFG.get("api_url", "")
@@ -23,6 +27,7 @@ def _parse_port() -> int:
         except (ValueError, IndexError):
             pass
     return 8001
+
 
 _PORT: int = _parse_port()
 
@@ -71,8 +76,9 @@ async def _restore_neutral(delay: float):
         return
     try:
         vts = await _get_vts()
-        param_list = [{"id": k, "value": float(v)} for k, v in neutral.items()]
-        req = vts.vts_request.InjectParameterDataRequest(parameter_values=param_list)
+        params = list(neutral.keys())
+        values = [float(v) for v in neutral.values()]
+        req = vts.vts_request.requestSetMultiParameterValue(params, values)
         await vts.request(req)
     except Exception as e:
         logger.debug("restore neutral failed: %s", e)
@@ -86,13 +92,17 @@ async def set_emotion(emotion: str) -> dict:
     if not preset:
         return {"status": "skipped", "reason": f"unknown emotion: {emotion}"}
 
-    params = preset.get("params", {})
+    params_dict = preset.get("params", {})
     duration = preset.get("duration", 3)
+
+    if not params_dict:
+        return {"status": "skipped", "reason": "no params defined"}
 
     try:
         vts = await _get_vts()
-        param_list = [{"id": k, "value": float(v)} for k, v in params.items()]
-        req = vts.vts_request.InjectParameterDataRequest(parameter_values=param_list)
+        param_names = list(params_dict.keys())
+        param_values = [float(v) for v in params_dict.values()]
+        req = vts.vts_request.requestSetMultiParameterValue(param_names, param_values)
         await vts.request(req)
         logger.info("Live2D emotion: %s (%ds)", emotion, duration)
     except Exception as e:
@@ -108,28 +118,18 @@ async def set_emotion(emotion: str) -> dict:
 
 
 async def set_expression(name: str, duration_seconds: float = 2.0) -> dict:
-    """Activate a VTube Studio expression by name."""
-    expr_id = _EXPR_MAP.get(name)
-    if not expr_id:
+    """Trigger a VTube Studio expression via hotkey."""
+    hotkey_id = _EXPR_MAP.get(name)
+    if not hotkey_id:
         return {"status": "skipped", "reason": f"unknown expression: {name}"}
 
     try:
         vts = await _get_vts()
-        req = vts.vts_request.requestSetExpressionState(expr_id, active=True)
+        req = vts.vts_request.requestTriggerHotKey(hotkey_id)
         await vts.request(req)
-        logger.info("VTS expression: %s (%s)", name, expr_id)
-
-        async def _deactivate():
-            await asyncio.sleep(duration_seconds)
-            try:
-                req_off = vts.vts_request.requestSetExpressionState(expr_id, active=False)
-                await vts.request(req_off)
-            except Exception:
-                pass
-
-        asyncio.create_task(_deactivate())
+        logger.info("VTS hotkey triggered: %s (%s)", name, hotkey_id)
     except Exception as e:
-        logger.warning("VTS expression failed (VTS not running?): %s", e)
+        logger.warning("VTS hotkey failed (VTS not running?): %s", e)
         return {"status": "skipped", "reason": str(e)}
 
-    return {"expression": name, "vts_id": expr_id, "duration": duration_seconds}
+    return {"expression": name, "hotkey_id": hotkey_id, "duration": duration_seconds}
