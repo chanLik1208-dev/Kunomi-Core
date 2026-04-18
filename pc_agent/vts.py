@@ -54,9 +54,9 @@ async def _get_vts():
     plugin_info = {
         "plugin_name": _VTS_CFG.get("plugin_name", "Kunomi-core"),
         "developer":   _VTS_CFG.get("plugin_developer", "dev"),
-        "authentication_token": "",
+        "authentication_token_path": "vts_token.txt",
     }
-    vts = pyvts.vts(plugin_info=plugin_info, vts_api_info={"port": _PORT})
+    vts = pyvts.vts(plugin_info=plugin_info, vts_api_info={"name": "VTubeStudioPublicAPI", "version": "1.0", "port": _PORT})
     try:
         await vts.connect()
         await vts.request_authenticate_token()
