@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # deploy_mac.sh — M4 Mac 初始部署腳本
 # 用法：bash scripts/deploy_mac.sh
-set -euo pipefail
+set -eu
+set -o pipefail 2>/dev/null || true
 
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$PROJECT_DIR"
