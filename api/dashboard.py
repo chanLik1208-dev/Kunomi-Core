@@ -12,7 +12,10 @@ _HTML = """<!DOCTYPE html>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: #0d0d14; color: #e0e0f0; font-family: 'Segoe UI', sans-serif; padding: 24px; }
-  h1 { font-size: 1.4rem; color: #a78bfa; margin-bottom: 20px; letter-spacing: 2px; }
+  h1 { font-size: 1.4rem; color: #a78bfa; margin-bottom: 12px; letter-spacing: 2px; }
+  .key-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 20px; }
+  .key-bar input { margin: 0; width: 260px; font-family: monospace; }
+  .key-bar span { font-size: 0.8rem; color: #7c7ca0; }
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 900px; }
   .card { background: #16161f; border: 1px solid #2a2a3a; border-radius: 10px; padding: 16px; }
   .card h2 { font-size: 0.85rem; color: #7c7ca0; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
@@ -43,6 +46,10 @@ _HTML = """<!DOCTYPE html>
 </head>
 <body>
 <h1>⬡ KUNOMI DASHBOARD</h1>
+<div class="key-bar">
+  <input id="api-key" type="password" placeholder="API Key（留空則不帶）" oninput="saveKey()">
+  <span id="key-hint"></span>
+</div>
 <div class="grid">
 
   <!-- 狀態 -->
@@ -95,6 +102,18 @@ _HTML = """<!DOCTYPE html>
 <script>
 const API = '';  // same origin
 
+function getKey() { return localStorage.getItem('kunomi_api_key') || ''; }
+function saveKey() {
+  const k = document.getElementById('api-key').value;
+  localStorage.setItem('kunomi_api_key', k);
+  document.getElementById('key-hint').textContent = k ? 'saved' : 'no key';
+}
+function apiHeaders(extra={}) {
+  const k = getKey();
+  return k ? {'Content-Type':'application/json','X-API-Key':k,...extra}
+           : {'Content-Type':'application/json',...extra};
+}
+
 function log(msg, cls='info') {
   const el = document.getElementById('log');
   const ts = new Date().toLocaleTimeString('zh-TW');
@@ -128,7 +147,7 @@ async function sendChat() {
   try {
     const r = await fetch(API + '/chat', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers: apiHeaders(),
       body: JSON.stringify({message: msg, username: user})
     });
     const d = await r.json();
@@ -147,7 +166,7 @@ async function triggerEvent(type, context={}) {
   try {
     const r = await fetch(API + '/event', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers: apiHeaders(),
       body: JSON.stringify({event_type: type, context})
     });
     const d = await r.json();
@@ -162,11 +181,18 @@ async function triggerEvent(type, context={}) {
 async function playSound(name) {
   log(`音效：${name}`);
   try {
-    await fetch(API + '/soundboard/' + name, {method: 'POST'});
+    await fetch(API + '/soundboard/' + name, {method: 'POST', headers: apiHeaders()});
     log(`音效 [${name}] 已觸發`, 'ok');
   } catch(e) {
     log('playSound 錯誤：' + e, 'err');
   }
+}
+
+// restore saved key
+const _savedKey = getKey();
+if (_savedKey) {
+  document.getElementById('api-key').value = _savedKey;
+  document.getElementById('key-hint').textContent = 'saved';
 }
 
 checkHealth();
