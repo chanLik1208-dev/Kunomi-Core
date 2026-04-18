@@ -53,7 +53,7 @@ fi
 step "啟動 Kunomi-core API 服務..."
 python main.py > logs/api.log 2>&1 &
 API_PID=$!
-info "API 服務已啟動（PID: $API_PID），日誌：logs/api.log"
+info "API PID: ${API_PID}  log: logs/api.log"
 
 # 等待 API 起來再啟動其他服務
 sleep 2
@@ -67,7 +67,7 @@ if [ "$NO_DISCORD" = false ]; then
     step "啟動 Discord Bot..."
     python -m discord_bot.bot > logs/discord.log 2>&1 &
     DISCORD_PID=$!
-    info "Discord Bot 已啟動（PID: $DISCORD_PID），日誌：logs/discord.log"
+    info "Discord Bot PID: ${DISCORD_PID}  log: logs/discord.log"
 else
     warn "跳過 Discord Bot（--no-discord）"
 fi
