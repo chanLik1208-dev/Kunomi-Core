@@ -144,9 +144,13 @@ async def tts_play(request: Request):
 @app.post("/soundboard/{name}", dependencies=[Depends(verify_key)])
 async def play_sound(name: str):
     """播放指定音效。name 對應 config/soundboard.yaml 的 key。"""
-    from pc_agent.soundboard import play
-    path = play(name)
-    return {"status": "played", "sound": name, "file": path}
+    try:
+        from pc_agent.soundboard import play
+        path = play(name)
+        return {"status": "played", "sound": name, "file": path}
+    except (ValueError, FileNotFoundError) as e:
+        logger.warning("soundboard: %s", e)
+        return {"status": "skipped", "sound": name, "reason": str(e)}
 
 
 # ── 遊戲事件 Webhook（Roblox / Minecraft 透過此端點推送事件）──────────────────
