@@ -32,8 +32,9 @@ New-Item -ItemType Directory -Force -Path "logs" | Out-Null
 Step "Starting Kunomi PC Agent (port 8100)..."
 $pcAgent = Start-Process -FilePath "python" `
     -ArgumentList "pc_agent\main.py" `
-    -RedirectStandardOutput "logs\pc_agent.log" `
-    -RedirectStandardError "logs\pc_agent_err.log" `
+    -WorkingDirectory $ProjectDir `
+    -RedirectStandardOutput "$ProjectDir\logs\pc_agent.log" `
+    -RedirectStandardError "$ProjectDir\logs\pc_agent_err.log" `
     -WindowStyle Hidden `
     -PassThru
 $pcAgent.Id | Out-File "logs\pc_agent.pid" -Encoding ASCII
@@ -56,8 +57,9 @@ if (-Not $NoMinecraft) {
         Step "Starting Minecraft log watcher..."
         $mcWatcher = Start-Process -FilePath "python" `
             -ArgumentList "-c","from perception.minecraft import start; import time; start(); time.sleep(86400)" `
-            -RedirectStandardOutput "logs\mc_watcher.log" `
-            -RedirectStandardError "logs\mc_watcher_err.log" `
+            -WorkingDirectory $ProjectDir `
+            -RedirectStandardOutput "$ProjectDir\logs\mc_watcher.log" `
+            -RedirectStandardError "$ProjectDir\logs\mc_watcher_err.log" `
             -WindowStyle Hidden `
             -PassThru
         $mcWatcher.Id | Out-File "logs\mc_watcher.pid" -Encoding ASCII
