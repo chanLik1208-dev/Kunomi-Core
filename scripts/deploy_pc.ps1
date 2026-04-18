@@ -28,20 +28,20 @@ Info "Virtual environment activated"
 
 # ── 3. Common dependencies ────────────────────────────────────────────────────
 Info "Installing shared dependencies..."
-pip install --upgrade pip -q
-pip install fastapi "uvicorn[standard]" httpx pyyaml -q
+python -m pip install --upgrade pip -q
+python -m pip install fastapi "uvicorn[standard]" httpx pyyaml -q
 
 # ── 4. PC-only dependencies ───────────────────────────────────────────────────
 Info "Installing PC-only dependencies (opencv / pygame)..."
-pip install opencv-python pygame -q
+python -m pip install opencv-python pygame -q
 
 # dxcam check
-$dxcamResult = & python -c "import dxcam; print('ok')" 2>&1
-if ($dxcamResult -eq "ok") {
+$dxcamResult = & python -c "import dxcam; print('ok')" 2>&1 ; $dxcamExit = $LASTEXITCODE
+if ($dxcamExit -eq 0 -and "$dxcamResult".Trim() -eq "ok") {
     Info "dxcam already installed"
 } else {
     Info "Installing dxcam..."
-    pip install dxcam -q
+    python -m pip install dxcam -q
 }
 
 # ── 5. Config ─────────────────────────────────────────────────────────────────
