@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# start_mac.sh — M4 Mac 啟動所有服務
-# 用法：bash scripts/start_mac.sh [--no-discord]
-set -euo pipefail
+# start_mac.sh — M4 Mac start all services
+# Usage: bash scripts/start_mac.sh [--no-discord]
+set -eu
+set -o pipefail 2>/dev/null || true
 
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$PROJECT_DIR"
@@ -19,74 +20,73 @@ for arg in "$@"; do
     esac
 done
 
-# ── 虛擬環境 ─────────────────────────────────────────────────────────────────
+# ── venv ──────────────────────────────────────────────────────────────────────
 if [ -f ".venv/bin/activate" ]; then
     source .venv/bin/activate
 else
-    warn "找不到 .venv，使用系統 Python（建議先執行 deploy_mac.sh）"
+    warn "No .venv found. Run deploy_mac.sh first."
 fi
 
-# ── 設定檔檢查 ────────────────────────────────────────────────────────────────
+# ── Config check ──────────────────────────────────────────────────────────────
 if [ ! -f "config/settings.yaml" ]; then
-    echo -e "${YELLOW}[WARN]${NC}  config/settings.yaml 不存在，請先執行 deploy_mac.sh"
+    warn "config/settings.yaml not found. Run deploy_mac.sh first."
     exit 1
 fi
 
-# ── 建立日誌目錄 ──────────────────────────────────────────────────────────────
 mkdir -p logs
 
-# ── 啟動 Ollama（若未運行）────────────────────────────────────────────────────
+# ── Ollama ────────────────────────────────────────────────────────────────────
 if command -v ollama &>/dev/null; then
     if ! pgrep -x ollama &>/dev/null; then
-        step "啟動 Ollama..."
+        step "Starting Ollama..."
         ollama serve > logs/ollama.log 2>&1 &
         sleep 2
-        info "Ollama 已啟動，日誌：logs/ollama.log"
+        info "Ollama started. log: logs/ollama.log"
     else
-        info "Ollama 已在運行"
+        info "Ollama already running."
     fi
 else
-    warn "找不到 ollama 指令，請先安裝：https://ollama.com"
+    warn "ollama not found. Install from https://ollama.com"
 fi
 
-# ── 啟動 FastAPI 主服務 ───────────────────────────────────────────────────────
-step "啟動 Kunomi-core API 服務..."
-python main.py > logs/api.log 2>&1 &
+# ── FastAPI ───────────────────────────────────────────────────────────────────
+step "Starting Kunomi-core API..."
+python3 main.py > logs/api.log 2>&1 &
 API_PID=$!
 info "API PID: ${API_PID}  log: logs/api.log"
 
-# 等待 API 起來再啟動其他服務
 sleep 2
-if ! kill -0 $API_PID 2>/dev/null; then
-    echo -e "${RED}[ERROR]${NC} API 服務啟動失敗，請查看 logs/api.log"
+if ! kill -0 ${API_PID} 2>/dev/null; then
+    echo -e "${RED}[ERROR]${NC} API failed to start. Check logs/api.log"
+    cat logs/api.log
     exit 1
 fi
 
-# ── 啟動 Discord Bot ──────────────────────────────────────────────────────────
+# ── Discord Bot ───────────────────────────────────────────────────────────────
 if [ "$NO_DISCORD" = false ]; then
-    step "啟動 Discord Bot..."
-    python -m discord_bot.bot > logs/discord.log 2>&1 &
+    step "Starting Discord Bot..."
+    python3 -m discord_bot.bot > logs/discord.log 2>&1 &
     DISCORD_PID=$!
     info "Discord Bot PID: ${DISCORD_PID}  log: logs/discord.log"
 else
-    warn "跳過 Discord Bot（--no-discord）"
+    warn "Skipping Discord Bot (--no-discord)"
 fi
 
-# ── 寫入 PID 檔（方便 stop_mac.sh 停止）─────────────────────────────────────
-echo "$API_PID" > logs/api.pid
+# ── PID files ─────────────────────────────────────────────────────────────────
+echo "${API_PID}" > logs/api.pid
 if [ "$NO_DISCORD" = false ] && [ -n "$DISCORD_PID" ]; then
-    echo "$DISCORD_PID" > logs/discord.pid
+    echo "${DISCORD_PID}" > logs/discord.pid
 fi
 
-# ── 完成 ─────────────────────────────────────────────────────────────────────
+# ── Done ──────────────────────────────────────────────────────────────────────
 echo ""
-info "═══════════════════════════════════════════════════"
-info "  Kunomi-core 已啟動！"
-info "  API：    http://localhost:8000/docs"
-info "  健康：   curl http://localhost:8000/health"
-info "  停止：   bash scripts/stop_mac.sh"
-info "  ASR：    在 Windows PC 上按住 ALT 鍵錄音"
-info "═══════════════════════════════════════════════════"
+info "==================================================="
+info "  Kunomi-core started!"
+info "  API:      http://localhost:8000/docs"
+info "  Health:   curl http://localhost:8000/health"
+info "  Dashboard: http://localhost:8000/dashboard"
+info "  Stop:     bash scripts/stop_mac.sh"
+info "  STT:      Hold ALT on Windows PC to record"
+info "==================================================="
 
-# 保持前景運行（Ctrl+C 停止所有服務）
-wait $API_PID
+wait ${API_PID}
