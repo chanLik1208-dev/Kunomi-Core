@@ -23,7 +23,7 @@ else
 fi
 PY_VER=$("$PYTHON" --version 2>&1) || PY_VER="unknown"
 PY_PATH=$(command -v "$PYTHON") || PY_PATH="$PYTHON"
-info "Python：$PY_VER（路徑：$PY_PATH）"
+info "Python: ${PY_VER} (${PY_PATH})"
 
 # ── 2. 建立虛擬環境 ───────────────────────────────────────────────────────────
 if [ ! -d ".venv" ]; then
