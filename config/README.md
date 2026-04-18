@@ -8,26 +8,52 @@
 
 全域設定檔，各模組啟動時讀取。
 
-| 區段 | 說明 |
-|------|------|
-| `llm` | Ollama 主機 IP、模型名稱、逾時秒數 |
-| `tts` | GPT-SoVITS API 位址 |
-| `asr` | Faster-Whisper 模型大小、按鍵發話設定 |
-| `api` | FastAPI 監聽 host / port |
-| `discord` | Bot Token、通知頻道 ID |
-| `character` | 冷場逾時秒數、自言自語最大循環次數 |
-| `filter` | 過濾詞庫路徑、是否啟用 AI 語意過濾 |
-| `vtube_studio` | VTube Studio WebSocket 位址 |
+| 區段 | 說明 | 執行機器 |
+|------|------|---------|
+| `llm` | Ollama 主機 IP、模型名稱、逾時秒數 | Mac（本機） |
+| `tts` | GPT-SoVITS API 位址 | Mac |
+| `asr` | Faster-Whisper 模型大小、按鍵發話設定 | Mac |
+| `api` | FastAPI 監聽 host / port | Mac |
+| `discord` | Bot Token、通知頻道 ID | Mac |
+| `character` | 冷場逾時秒數、自言自語最大循環次數 | Mac |
+| `filter` | 過濾詞庫路徑、是否啟用 AI 語意過濾 | Mac |
+| `vtube_studio` | VTube Studio WebSocket 位址（PC） | Mac → PC |
+| `pc_agent` | PC Agent 位址與 API Key | Mac → PC |
+| `vision` | Ollama Vision 模型名稱 | PC |
+| `soundboard` | 音效資料夾路徑 | PC |
+| `minecraft` | 日誌路徑、輪詢間隔 | PC |
+| `roblox` | Webhook secret | PC |
+| `memory` | ChromaDB 路徑、事件上限 | Mac |
+| `twitch` | Bot 帳號、OAuth token、頻道 | Mac |
+| `youtube` | API Key、影片 ID、輪詢設定 | Mac |
 
 **首次設定必填：**
 ```yaml
 llm:
-  host: "http://192.168.1.XXX:11434"  # 填入 4070 PC 的局域網 IP
+  host: "http://127.0.0.1:11434"     # Ollama 在 Mac 本機
+
+tts:
+  api_url: "http://127.0.0.1:9880"   # GPT-SoVITS 在 Mac 本機
+
+pc_agent:
+  host: "http://192.168.1.XXX:8100"  # PC 局域網 IP
+  api_key: "your_secret"
+
+vtube_studio:
+  api_url: "ws://127.0.0.1:8001"     # VTube Studio 在 PC（本機）
 
 discord:
   token: "your_bot_token_here"
   notify_channel_id: 123456789
 ```
+
+---
+
+### `settings.example.yaml`
+
+`settings.yaml` 的範本，不含敏感資料，已 commit 進 git。
+
+---
 
 ### `blocked_keywords.txt`
 
@@ -39,22 +65,39 @@ discord:
 人身攻擊詞B
 ```
 
-修改後下次 API 啟動時自動重新載入（目前為啟動時讀取，如需熱更新需擴充 `filter.py`）。
+---
 
-## 未來擴充
+### `expressions.yaml`
 
-- `expressions.yaml`：VTube Studio 表情代碼對應表（第三階段）
-- `soundboard.yaml`：音效板音效名稱 → 檔案路徑對應（第三階段）
-- `idle_topics.yaml`：自言自語話題池（第四階段）
+VTube Studio 表情代碼對應表。
+
+```yaml
+happy:    "Expression_Happy"
+surprised: "Expression_Surprise"
+sarcastic: "Expression_Smirk"
+```
+
+---
+
+### `soundboard.yaml`
+
+音效名稱 → 音效檔路徑對應（相對於 `assets/sounds/`）。
+
+```yaml
+death:   "death.wav"
+victory: "win.wav"
+fail:    "fail.wav"
+```
+
+---
 
 ## 待辦事項
 
-- [ ] 填入 `settings.yaml` 的 `llm.host`（4070 PC 局域網 IP，格式：`http://192.168.1.XXX:11434`）
+- [ ] 填入 `settings.yaml` 的 `pc_agent.host`（PC 局域網 IP）
 - [ ] 填入 `settings.yaml` 的 `discord.token` 與 `discord.notify_channel_id`
-- [ ] 填入 `settings.yaml` 的 `vtube_studio.api_url`（VTube Studio 實際 WebSocket 位址）
-- [ ] 填入 `settings.yaml` 的 `tts.api_url`（GPT-SoVITS 啟動後確認 port）
-- [ ] 建立 `config/expressions.yaml`（第三階段，對應 VTube Studio 表情 ID）
-- [ ] 建立 `config/soundboard.yaml`（第三階段，音效名稱 → `.wav` / `.mp3` 路徑）
-- [ ] 建立 `config/idle_topics.yaml`（第四階段，自言自語預設話題池）
+- [ ] 填入 `settings.yaml` 的 `vtube_studio.api_url`
+- [ ] 填入 `settings.yaml` 的 `twitch` / `youtube` 相關 token（直播平台二選一或全填）
+- [ ] 確認 `blocked_keywords.txt` 詞庫內容
+- [x] 建立 `config/expressions.yaml`
+- [x] 建立 `config/soundboard.yaml`
 - [ ] 擴充 `filter.py` 支援熱更新（目前修改 `blocked_keywords.txt` 需重啟才生效）
-- [ ] 確認 `blocked_keywords.txt` 詞庫內容，至少加入基本安全詞

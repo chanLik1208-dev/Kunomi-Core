@@ -1,79 +1,53 @@
 # discord_bot/
 
-Discord Bot 遙控器，讓你在手機或其他裝置遠端控制直播系統。
+Discord Bot 遙控器，讓你在手機或其他裝置遠端控制直播系統。運行於 M4 Mac。
 
 ## 定位
 
-Discord Bot **不是**聊天室互動入口，而是**開發者遙控器**：
+Discord Bot 是**開發者遙控器**，不是觀眾互動入口：
 
-- 遠端觸發事件（例如手機下指令讓 AI 吐槽）
-- 接收系統重要通知（錯誤警報、溫度過高）
+- 遠端觸發事件（手機下指令讓 AI 吐槽）
+- 接收系統通知（錯誤警報）
 - 查詢系統狀態
 
-> ⚠️ 聊天室互動（Twitch / YouTube 彈幕）走獨立模組，不經過 Discord Bot，避免速率限制。
+觀眾互動（Twitch / YouTube 彈幕）走 `chat/` 模組，不經 Discord Bot。
 
----
-
-## 計劃指令
+## 指令一覽
 
 | 指令 | 說明 |
 |------|------|
 | `!health` | 查詢系統健康狀態 |
-| `!event <type>` | 手動觸發事件（例：`!event death`） |
+| `!event <type>` | 手動觸發事件（`!event death`）|
 | `!chat <訊息>` | 讓 Kunomi 回應一則訊息 |
 | `!idle on/off` | 開關自言自語模式 |
 | `!screenshot` | 觸發截圖吐槽 |
-| `!shutdown` | 安全關閉系統 |
+| `!shutdown` | 安全關閉系統（需 `!confirm` 二次確認）|
 
----
-
-## 實作說明（第二階段）
-
-Bot 透過 HTTP 呼叫本地 FastAPI，不直接操作 LLM：
+## 架構
 
 ```
-Discord 指令 → discord.py Bot → POST http://localhost:8000/event → FastAPI → Ollama
+Discord 指令
+  → discord.py Bot（Mac）
+  → POST http://localhost:8000/event
+  → FastAPI → LLM → TTS → PC 播放
 ```
 
-這樣架構的好處：
-- Bot 崩潰不影響直播系統
-- 所有邏輯集中在 FastAPI，Bot 只是薄薄的介面層
+## 安全設計
 
----
+- `allowed_user_ids` 限制只有特定使用者可執行指令
+- `!shutdown` 需在 15 秒內回覆 `!confirm`
+- Bot Token 不得 commit 進 git（`settings.yaml` 已排除）
 
-## 速率限制注意
+## 節流機制
 
-- Discord Bot 每秒訊息上限：5 則
-- **禁止**將遊戲日誌、聊天室串流直接發到 Discord
-- 系統通知加入節流機制，同類事件 30 秒內只發一次
-
----
-
-## 檔案規劃
-
-```
-discord_bot/
-├── README.md       本文件
-├── bot.py          Bot 主程式（第二階段建立）
-└── commands/       各指令模組（第二階段建立）
-```
+同類系統通知 30 秒內只推一則，避免事件爆炸時洗頻 Discord。
 
 ## 待辦事項
 
-### 第二階段 ✅
-
-- [ ] 建立 Discord Application 並取得 Bot Token，填入 `config/settings.yaml`
-- [x] 建立 `discord_bot/bot.py`，初始化 `discord.py` Client
-- [x] 實作 `!health` 指令
-- [x] 實作 `!event <type>` 指令（支援所有事件類型）
-- [x] 實作 `!chat <訊息>` 指令
-- [x] 實作 `!idle on/off` 指令（開關自言自語模式）
-- [ ] 實作 `!screenshot` 指令（第三階段端點建好後啟用）
-- [x] 實作 `!shutdown` 指令（15 秒內需回覆 `!confirm` 才執行）
-- [x] 加入節流機制：同類系統通知 30 秒內只推一則
-
-### 安全 ✅
-
-- [x] 限制指令只有 `allowed_user_ids` 清單內的使用者可執行
-- [x] `!shutdown` 指令加二次確認
-- [x] Bot Token 不得 commit 進 git，`.gitignore` 已排除 `settings.yaml`，範本存於 `settings.example.yaml`
+- [x] `bot.py`：discord.py Client 初始化
+- [x] `!health`、`!event`、`!chat`、`!idle`、`!shutdown` 指令
+- [x] 節流機制（`notify_throttle_seconds`）
+- [x] `allowed_user_ids` 白名單驗證
+- [x] `!shutdown` 二次確認
+- [ ] 填入 `config/settings.yaml` 的 `discord.token` 與 `discord.notify_channel_id`
+- [ ] 填入 `discord.allowed_user_ids`（你的 Discord 使用者 ID）
