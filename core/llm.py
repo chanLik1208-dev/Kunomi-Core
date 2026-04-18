@@ -1,5 +1,7 @@
 import asyncio
+import json
 import logging
+import re
 import httpx
 import yaml
 from pathlib import Path
@@ -40,18 +42,57 @@ async def chat(prompt: str, system: str = "") -> str:
     raise RuntimeError(f"LLM 連線失敗，已重試 {_MAX_RETRIES} 次：{last_err}") from last_err
 
 
+_TOOL_RE = re.compile(r"TOOL:\s*(\{.+\})", re.DOTALL)
+
+
+def _extract_tool_call(response: str) -> tuple[str, dict | None]:
+    """
+    從 LLM 回應中拆出說話文字與工具呼叫。
+    回傳 (說話文字, tool_dict | None)。
+    """
+    m = _TOOL_RE.search(response)
+    if not m:
+        return response.strip(), None
+    speech = response[:m.start()].strip()
+    try:
+        tool = json.loads(m.group(1))
+        if "tool" in tool and "args" in tool:
+            return speech, tool
+    except json.JSONDecodeError:
+        pass
+    return response.strip(), None
+
+
 async def chat_with_event(event_type: str, context: dict = {}) -> str:
-    """根據事件類型組裝 prompt 後送給 LLM，回應後自動套用 Live2D 情緒參數。"""
+    """
+    根據事件類型組裝 prompt 後送給 LLM。
+    - 自動套用 Live2D 情緒
+    - 若回應含 TOOL: {...} 則非同步執行工具呼叫
+    回傳純說話文字（已去除工具呼叫部分）。
+    """
     from core.prompt import build_prompt, SYSTEM_PROMPT
     user_prompt = build_prompt(event_type, context)
     logger.debug("觸發事件：%s context=%s", event_type, context)
-    response = await chat(prompt=user_prompt, system=SYSTEM_PROMPT)
+    raw = await chat(prompt=user_prompt, system=SYSTEM_PROMPT)
 
-    # 回應後非同步套用 Live2D 情緒（VTube Studio 未啟動時靜默略過）
+    speech, tool_call = _extract_tool_call(raw)
+
+    # Live2D 情緒（非同步，不阻塞回應）
     try:
         from tools.live2d import auto_emotion
         asyncio.create_task(auto_emotion(event_type))
     except Exception:
         pass
 
-    return response
+    # 工具呼叫（非同步，不阻塞 TTS）
+    if tool_call:
+        async def _run_tool():
+            from tools import dispatch
+            try:
+                result = await dispatch(tool_call["tool"], tool_call["args"])
+                logger.info("工具執行完成 [%s]：%s", tool_call["tool"], result)
+            except Exception as e:
+                logger.warning("工具執行失敗 [%s]：%s", tool_call["tool"], e)
+        asyncio.create_task(_run_tool())
+
+    return speech
