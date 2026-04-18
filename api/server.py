@@ -16,7 +16,10 @@ logger = logging.getLogger(__name__)
 _config = yaml.safe_load(Path("config/settings.yaml").read_text(encoding="utf-8"))
 _API_KEY: str = _config.get("api", {}).get("api_key", "")
 
+from api.dashboard import router as dashboard_router
+
 app = FastAPI(title="Kunomi-core API")
+app.include_router(dashboard_router)
 
 
 # ── 中介層：請求 logging ───────────────────────────────────────────────────────
