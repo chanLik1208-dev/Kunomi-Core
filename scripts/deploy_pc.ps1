@@ -11,8 +11,11 @@ function Fail { param($msg) Write-Host "[ERROR] $msg" -ForegroundColor Red; exit
 
 # ── 1. Python ─────────────────────────────────────────────────────────────────
 Info "Python version check..."
+$ErrorActionPreference = "Continue"
 $pyCheck = & python --version 2>&1
-if ($LASTEXITCODE -ne 0) { Fail "Python not found. Please install Python 3.11+" }
+$pyExit = $LASTEXITCODE
+$ErrorActionPreference = "Stop"
+if ($pyExit -ne 0) { Fail "Python not found. Please install Python 3.11+" }
 Info "Python: $pyCheck"
 
 # ── 2. venv ───────────────────────────────────────────────────────────────────
@@ -66,8 +69,11 @@ New-Item -ItemType Directory -Force -Path "screenshots","logs","assets\sounds" |
 
 # ── 7. Ollama check ───────────────────────────────────────────────────────────
 Info "Checking Ollama..."
+$ErrorActionPreference = "Continue"
 $ollamaCheck = & ollama --version 2>&1
-if ($LASTEXITCODE -eq 0) {
+$ollamaExit = $LASTEXITCODE
+$ErrorActionPreference = "Stop"
+if ($ollamaExit -eq 0) {
     Info "Ollama: $ollamaCheck"
 } else {
     Warn "Ollama not found or not in PATH"
