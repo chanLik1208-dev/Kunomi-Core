@@ -60,3 +60,27 @@ class GeneralCommands(commands.Cog):
                     await ctx.send(f"⚠️ {resp.json().get('detail', '未知錯誤')}")
             except Exception as e:
                 await ctx.send(f"❌ 請求失敗：{e}")
+
+    @commands.command(name="dm")
+    async def dm(self, ctx: commands.Context, member: discord.Member, *, message: str):
+        """讓 Kunomi 以 Bot 身份 DM 指定使用者。用法：!dm @使用者 你好"""
+        async with httpx.AsyncClient(timeout=30) as client:
+            try:
+                resp = await client.post(
+                    f"{API_BASE}/chat",
+                    json={"message": message, "username": str(member.display_name)},
+                    headers=self.headers,
+                )
+                if resp.status_code != 200:
+                    await ctx.send(f"⚠️ {resp.json().get('detail', '未知錯誤')}")
+                    return
+                response_text = resp.json()["response"]
+            except Exception as e:
+                await ctx.send(f"❌ 請求失敗：{e}")
+                return
+
+        try:
+            await member.send(response_text)
+            await ctx.send(f"✅ 已 DM {member.display_name}")
+        except discord.Forbidden:
+            await ctx.send(f"⚠️ 無法 DM {member.display_name}（對方可能關閉了 DM）")
