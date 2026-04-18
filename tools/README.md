@@ -51,7 +51,7 @@ async def play_sound(name: str):
 | 工具名稱 | 檔案 | 說明 |
 |---------|------|------|
 | `vote_start` | `tools/vote.py` | 開始觀眾投票 |
-| `vote_result` | `tools/vote.py` | 讀取投票結果並執行對應指令 |
+| `vote_result` | `tools/vote.py` | 讀取投票結果，決定 AI 說話內容 |
 | `memory_save` | `tools/memory.py` | 將事件存入 ChromaDB |
 | `memory_query` | `tools/memory.py` | 查詢過去相關記憶 |
 
@@ -76,8 +76,7 @@ async def play_sound(name: str):
 
 ### 第四階段
 
-- [ ] 建立 `tools/vote.py`：`vote_start`（開始投票）、`vote_result`（讀取結果）
-- [ ] 投票工具需設安全白名單，限制 AI 可執行的遊戲操作種類
+- [ ] 建立 `tools/vote.py`：`vote_start`（開始投票）、`vote_result`（讀取結果，影響 AI 台詞）
 
 ### 第五階段
 

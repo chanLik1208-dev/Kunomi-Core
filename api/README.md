@@ -96,7 +96,7 @@ uvicorn api.server:app --reload --host 0.0.0.0 --port 8000
 | `POST` | `/screenshot` | 觸發 DXcam 截圖並送 Vision 模型 |
 | `POST` | `/soundboard/{name}` | 觸發音效板 |
 | `GET` | `/memory/recent` | 查詢最近記憶摘要 |
-| `POST` | `/vote/start` | 開始觀眾投票 |
+| `POST` | `/vote/start` | 開始觀眾投票（結果僅影響 AI 台詞）|
 
 ## 待辦事項
 
@@ -120,6 +120,6 @@ uvicorn api.server:app --reload --host 0.0.0.0 --port 8000
 
 ### 第四階段
 
-- [ ] 實作 `POST /vote/start` 與 `GET /vote/result` 端點
+- [ ] 實作 `POST /vote/start` 與 `GET /vote/result` 端點（僅影響 AI 台詞）
 - [ ] 實作 `GET /memory/recent` 端點（查詢 ChromaDB 最近 N 筆記憶）
 - [ ] 實作 `POST /stream/end` 端點（觸發今日直播總結流程）

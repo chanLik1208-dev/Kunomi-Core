@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from core.llm import chat_with_event
 from core.filter import rule_filter, semantic_filter, sanitize_response
 from idle.state import activity_ping, start as start_idle
+from tts.speaker import speak
 
 logger = logging.getLogger(__name__)
 
@@ -100,6 +101,7 @@ async def trigger_event(req: EventRequest):
     response = await chat_with_event(req.event_type, req.context)
     response = sanitize_response(response)
     logger.info("事件 [%s] 回應：%s", req.event_type, response[:60])
+    await speak(response)
     return {"response": response, "event": req.event_type}
 
 
@@ -115,6 +117,7 @@ async def chat_endpoint(req: ChatRequest):
         "chat", {"username": req.username, "message": req.message}
     )
     response = sanitize_response(response)
+    await speak(response)
     return {"response": response}
 
 

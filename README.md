@@ -101,8 +101,7 @@ bash scripts/health_check.sh
 
 - [ ] Twitch 聊天室 API 串接
 - [ ] YouTube Live 聊天室 API 串接
-- [ ] 觀眾投票系統（`tools/vote.py`）
-- [ ] 投票結果執行遊戲操作（需設安全白名單，避免帳號損失）
+- [ ] 觀眾投票系統（`tools/vote.py`，僅限投票決定 AI 說話內容，不執行遊戲操作）
 
 ## API 端點
 
