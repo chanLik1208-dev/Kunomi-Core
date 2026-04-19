@@ -50,11 +50,36 @@ def _get_lock() -> asyncio.Lock:
     return _vts_lock
 
 
+def _inject_request(param_names: list, param_values: list, face_found: bool = True) -> dict:
+    """Build InjectParameterDataRequest with faceFound=True to override VTS idle animation."""
+    return {
+        "apiName": "VTubeStudioPublicAPI",
+        "apiVersion": "1.0",
+        "requestID": "kunomi-inject",
+        "messageType": "InjectParameterDataRequest",
+        "data": {
+            "faceFound": face_found,
+            "mode": "set",
+            "parameterValues": [
+                {"id": n, "value": float(v), "weight": 1.0}
+                for n, v in zip(param_names, param_values)
+            ],
+        },
+    }
+
+
 async def vts_request(req: dict) -> dict:
     """Thread-safe wrapper: serialize all VTS WebSocket calls."""
     async with _get_lock():
         vts = await _get_vts()
         return await vts.request(req)
+
+
+async def vts_inject(param_names: list, param_values: list) -> dict:
+    """Inject parameters with faceFound=True — overrides VTS idle animation."""
+    async with _get_lock():
+        vts = await _get_vts()
+        return await vts.request(_inject_request(param_names, param_values))
 
 
 async def _get_vts():
@@ -91,9 +116,7 @@ async def _hold_params(param_names: list, param_values: list, duration: float):
         deadline = asyncio.get_event_loop().time() + duration
         while asyncio.get_event_loop().time() < deadline:
             try:
-                vts = await _get_vts()
-                req = vts.vts_request.requestSetMultiParameterValue(param_names, param_values)
-                await vts_request(req)
+                await vts_inject(param_names, param_values)
             except Exception:
                 pass
             await asyncio.sleep(0.05)
@@ -101,11 +124,7 @@ async def _hold_params(param_names: list, param_values: list, duration: float):
         neutral = _PARAMS.get("neutral", {}).get("params", {})
         if neutral:
             try:
-                vts = await _get_vts()
-                req = vts.vts_request.requestSetMultiParameterValue(
-                    list(neutral.keys()), [float(v) for v in neutral.values()]
-                )
-                await vts_request(req)
+                await vts_inject(list(neutral.keys()), [float(v) for v in neutral.values()])
             except Exception as e:
                 logger.debug("restore neutral failed: %s", e)
 
@@ -134,9 +153,7 @@ async def set_emotion(emotion: str) -> dict:
         _emotion_task = asyncio.create_task(_hold_params(param_names, param_values, duration))
     else:
         try:
-            vts = await _get_vts()
-            req = vts.vts_request.requestSetMultiParameterValue(param_names, param_values)
-            await vts_request(req)
+            await vts_inject(param_names, param_values)
         except Exception as e:
             logger.warning("Live2D inject failed (VTS not running?): %s", e)
             return {"status": "skipped", "reason": str(e)}

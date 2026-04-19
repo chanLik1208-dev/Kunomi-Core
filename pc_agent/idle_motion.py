@@ -94,12 +94,8 @@ async def _loop(_get_vts_unused=None) -> None:
         }
 
         try:
-            from pc_agent.vts import vts_request, _get_vts
-            vts = await _get_vts()
-            req = vts.vts_request.requestSetMultiParameterValue(
-                list(params.keys()), list(params.values())
-            )
-            await vts_request(req)
+            from pc_agent.vts import vts_inject
+            await vts_inject(list(params.keys()), list(params.values()))
         except Exception:
             await asyncio.sleep(1.0)  # back off on VTS error
 
