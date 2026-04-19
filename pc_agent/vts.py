@@ -146,8 +146,19 @@ async def set_emotion(emotion: str) -> dict:
     return {"emotion": emotion}
 
 
+async def _cancel_expression_after(hotkey_id: str, delay: float):
+    await asyncio.sleep(delay)
+    try:
+        vts = await _get_vts()
+        req = vts.vts_request.requestTriggerHotKey(hotkey_id)
+        await vts_request(req)
+        logger.debug("VTS hotkey deactivated: %s", hotkey_id)
+    except Exception as e:
+        logger.debug("VTS hotkey deactivate failed: %s", e)
+
+
 async def set_expression(name: str, duration_seconds: float = 2.0) -> dict:
-    """Trigger a VTube Studio expression via hotkey."""
+    """Trigger a VTube Studio expression via hotkey, auto-cancel after duration_seconds."""
     hotkey_id = _EXPR_MAP.get(name)
     if not hotkey_id:
         return {"status": "skipped", "reason": f"unknown expression: {name}"}
@@ -160,5 +171,8 @@ async def set_expression(name: str, duration_seconds: float = 2.0) -> dict:
     except Exception as e:
         logger.warning("VTS hotkey failed (VTS not running?): %s", e)
         return {"status": "skipped", "reason": str(e)}
+
+    if duration_seconds > 0:
+        asyncio.create_task(_cancel_expression_after(hotkey_id, duration_seconds))
 
     return {"expression": name, "hotkey_id": hotkey_id, "duration": duration_seconds}
