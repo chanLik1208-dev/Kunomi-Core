@@ -39,7 +39,6 @@ _EXPR_MAP: dict = yaml.safe_load(
 )
 
 _vts_client = None
-_emotion_task: asyncio.Task | None = None
 _vts_lock: asyncio.Lock | None = None
 
 
@@ -110,23 +109,8 @@ async def _get_vts():
 
 
 
-async def _hold_params(param_names: list, param_values: list):
-    """Continuously reinject parameters every 50 ms until cancelled (next emotion replaces this)."""
-    try:
-        while True:
-            try:
-                await vts_inject(param_names, param_values)
-            except Exception:
-                pass
-            await asyncio.sleep(0.05)
-    except asyncio.CancelledError:
-        pass
-
-
 async def set_emotion(emotion: str) -> dict:
-    """Inject Live2D parameter preset, hold until next emotion replaces it."""
-    global _emotion_task
-
+    """Blend into emotion preset via idle_motion master loop, return to idle after duration."""
     preset = _PARAMS.get(emotion)
     if not preset:
         return {"status": "skipped", "reason": f"unknown emotion: {emotion}"}
@@ -135,15 +119,17 @@ async def set_emotion(emotion: str) -> dict:
     if not params_dict:
         return {"status": "skipped", "reason": "no params defined"}
 
-    if _emotion_task and not _emotion_task.done():
-        _emotion_task.cancel()
+    duration = float(preset.get("duration", 0))  # 0 = hold forever
 
-    param_names = list(params_dict.keys())
-    param_values = [float(v) for v in params_dict.values()]
-    _emotion_task = asyncio.create_task(_hold_params(param_names, param_values))
+    try:
+        from pc_agent.idle_motion import set_emotion as im_set_emotion
+        im_set_emotion(params_dict, duration)
+    except Exception as e:
+        logger.warning("idle_motion.set_emotion failed: %s", e)
+        return {"status": "skipped", "reason": str(e)}
 
-    logger.info("Live2D emotion: %s (持續)", emotion)
-    return {"emotion": emotion}
+    logger.info("Live2D emotion: %s (duration=%.1fs)", emotion, duration)
+    return {"emotion": emotion, "duration": duration}
 
 
 async def _cancel_expression_after(hotkey_id: str, delay: float):
