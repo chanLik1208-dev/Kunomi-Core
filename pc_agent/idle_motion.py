@@ -134,7 +134,8 @@ async def _loop() -> None:
         try:
             from pc_agent.vts import vts_inject
             await vts_inject(list(final.keys()), list(final.values()))
-        except Exception:
+        except Exception as _e:
+            logger.warning("idle inject error: %s", _e)
             await asyncio.sleep(0.5)
 
 
