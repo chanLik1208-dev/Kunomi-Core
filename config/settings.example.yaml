@@ -9,7 +9,7 @@ llm:
 tts:
   api_url: ""            # GPT-SoVITS URL (e.g. http://127.0.0.1:9880), leave empty to use edge-tts
   edge_voice: "zh-TW-HsiaoChenNeural"  # edge-tts voice, used when api_url is empty
-
+  say_voice: "Mei-Jia"                 # macOS say fallback voice (run `say -v ?` to list)
 asr:
   engine: "faster_whisper"
   model_size: "medium"
@@ -42,6 +42,16 @@ vtube_studio:
   api_url: "ws://192.168.1.XXX:8001" # 4070 PC VTube Studio WebSocket
   plugin_name: "Kunomi-core"
   plugin_developer: "you"
+  idle_motion:                        # Live2D parameter names (Cubism defaults)
+    param_angle_x:    "ParamAngleX"
+    param_angle_y:    "ParamAngleY"
+    param_angle_z:    "ParamAngleZ"
+    param_breath:     "ParamBreath"
+    param_eye_ball_x: "ParamEyeBallX"
+    param_eye_ball_y: "ParamEyeBallY"
+    param_eye_l_open: "ParamEyeLOpen"
+    param_eye_r_open: "ParamEyeROpen"
+    param_mouth_open: "ParamMouthOpenY"
 
 pc_agent:
   host: "http://192.168.1.XXX:8100"

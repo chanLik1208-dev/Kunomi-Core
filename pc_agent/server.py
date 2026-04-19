@@ -31,6 +31,15 @@ async def on_startup():
         start_asr()
         logger.info("ASR 按鍵發話已啟動")
 
+    if _config.get("vtube_studio", {}).get("api_url") or _config.get("vtube_studio", {}).get("port"):
+        try:
+            from pc_agent.idle_motion import start as start_idle
+            from pc_agent.vts import _get_vts
+            start_idle(_get_vts)
+            logger.info("Idle motion loop 已啟動")
+        except Exception as e:
+            logger.warning("Idle motion 啟動失敗（VTS 未連線？）: %s", e)
+
 
 async def verify_key(request: Request):
     if not _API_KEY:
@@ -107,6 +116,30 @@ async def tts_play(request: Request):
     # detect format by magic bytes
     suffix = ".wav" if audio_bytes[:4] == b"RIFF" else ".mp3"
 
+    # pre-compute amplitude envelope for lip sync (WAV only)
+    amp_frames: list[float] = []
+    if suffix == ".wav":
+        try:
+            import io as _io
+            import wave
+            import struct
+            with wave.open(_io.BytesIO(audio_bytes)) as wf:
+                sw = wf.getsampwidth()
+                fr = wf.getframerate()
+                chunk_frames = int(fr * 0.05)  # 50ms
+                fmt = {1: "b", 2: "h", 4: "i"}.get(sw, "h")
+                max_val = float(2 ** (8 * sw - 1))
+                while True:
+                    raw = wf.readframes(chunk_frames)
+                    if not raw:
+                        break
+                    n = len(raw) // sw
+                    samples = struct.unpack(f"{n}{fmt}", raw)
+                    rms = (sum(s * s for s in samples) / max(n, 1)) ** 0.5
+                    amp_frames.append(min(rms / max_val * 3.0, 1.0))  # boost gain
+        except Exception:
+            amp_frames = []
+
     asr_mod.is_speaking = True
     tmp_path = None
     try:
@@ -127,8 +160,28 @@ async def tts_play(request: Request):
             from pc_agent.subtitle import broadcast
             asyncio.create_task(broadcast(subtitle_text))
 
+        # lip sync: drive mouth via idle_motion
+        try:
+            from pc_agent.idle_motion import set_mouth
+            _has_lipsync = True
+        except Exception:
+            _has_lipsync = False
+
+        frame_idx = 0
         while pygame.mixer.music.get_busy():
+            if _has_lipsync:
+                if amp_frames:
+                    set_mouth(amp_frames[min(frame_idx, len(amp_frames) - 1)])
+                    frame_idx += 1
+                else:
+                    # MP3 fallback: talking sine wave
+                    import math as _math
+                    import time as _time
+                    set_mouth(max(0.0, _math.sin(_time.monotonic() * _math.pi * 8) * 0.6))
             await asyncio.sleep(0.05)
+
+        if _has_lipsync:
+            set_mouth(None)
         pygame.mixer.music.unload()
     finally:
         asr_mod.is_speaking = False
