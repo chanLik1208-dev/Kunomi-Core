@@ -93,7 +93,8 @@ def _ptt_loop():
         if stream is None:
             return
         stream.stop()
-        data, _ = stream.read(stream.read_available)
+        avail = stream.read_available
+        data, _ = stream.read(avail) if avail > 0 else (stream.read(1)[0][:0], False)
         stream.close()
         stream = None
 

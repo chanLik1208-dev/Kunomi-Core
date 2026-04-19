@@ -22,7 +22,6 @@ _idle_cfg = _cfg.get("vtube_studio", {}).get("idle_motion", {})
 _P_ANGLE_X    = _idle_cfg.get("param_angle_x",    "FaceAngleX")
 _P_ANGLE_Y    = _idle_cfg.get("param_angle_y",    "FaceAngleY")
 _P_ANGLE_Z    = _idle_cfg.get("param_angle_z",    "FaceAngleZ")
-_P_BREATH     = _idle_cfg.get("param_breath",     "Breathing")
 _P_EYE_BALL_X = _idle_cfg.get("param_eye_ball_x", "EyeRightX")
 _P_EYE_BALL_Y = _idle_cfg.get("param_eye_ball_y", "EyeRightY")
 _P_EYE_L_OPEN = _idle_cfg.get("param_eye_l_open", "EyeOpenLeft")
@@ -85,8 +84,6 @@ async def _loop() -> None:
         blend = max(0.0, min(1.0, blend))
 
         # ── Idle values ───────────────────────────────────────────────────────
-        breath = (math.sin(t * 2 * math.pi * 0.25) + 1) / 2
-
         head_x = (math.sin(t * 2 * math.pi * 0.07) * 4.0
                   + math.sin(t * 2 * math.pi * 0.13) * 1.5)
         head_y = (math.sin(t * 2 * math.pi * 0.05) * 3.0
@@ -115,7 +112,6 @@ async def _loop() -> None:
             _P_ANGLE_X:    head_x,
             _P_ANGLE_Y:    head_y,
             _P_ANGLE_Z:    head_z,
-            _P_BREATH:     breath,
             _P_EYE_BALL_X: eye_x,
             _P_EYE_BALL_Y: eye_y,
             _P_EYE_L_OPEN: eye_open,
