@@ -39,7 +39,7 @@ _EXPR_MAP: dict = yaml.safe_load(
 )
 
 _vts_client = None
-_restore_task: asyncio.Task | None = None
+_emotion_task: asyncio.Task | None = None
 
 
 async def _get_vts():
@@ -69,24 +69,35 @@ async def _get_vts():
     return vts
 
 
-async def _restore_neutral(delay: float):
-    await asyncio.sleep(delay)
-    neutral = _PARAMS.get("neutral", {}).get("params", {})
-    if not neutral:
-        return
+
+async def _hold_params(param_names: list, param_values: list, duration: float):
+    """Continuously reinject parameters every 50 ms for `duration` seconds, then restore neutral."""
     try:
-        vts = await _get_vts()
-        params = list(neutral.keys())
-        values = [float(v) for v in neutral.values()]
-        req = vts.vts_request.requestSetMultiParameterValue(params, values)
-        await vts.request(req)
-    except Exception as e:
-        logger.debug("restore neutral failed: %s", e)
+        deadline = asyncio.get_event_loop().time() + duration
+        while asyncio.get_event_loop().time() < deadline:
+            try:
+                vts = await _get_vts()
+                req = vts.vts_request.requestSetMultiParameterValue(param_names, param_values)
+                await vts.request(req)
+            except Exception:
+                pass
+            await asyncio.sleep(0.05)
+    finally:
+        neutral = _PARAMS.get("neutral", {}).get("params", {})
+        if neutral:
+            try:
+                vts = await _get_vts()
+                req = vts.vts_request.requestSetMultiParameterValue(
+                    list(neutral.keys()), [float(v) for v in neutral.values()]
+                )
+                await vts.request(req)
+            except Exception as e:
+                logger.debug("restore neutral failed: %s", e)
 
 
 async def set_emotion(emotion: str) -> dict:
     """Inject Live2D parameter preset for the given emotion."""
-    global _restore_task
+    global _emotion_task
 
     preset = _PARAMS.get(emotion)
     if not preset:
@@ -98,22 +109,24 @@ async def set_emotion(emotion: str) -> dict:
     if not params_dict:
         return {"status": "skipped", "reason": "no params defined"}
 
-    try:
-        vts = await _get_vts()
-        param_names = list(params_dict.keys())
-        param_values = [float(v) for v in params_dict.values()]
-        req = vts.vts_request.requestSetMultiParameterValue(param_names, param_values)
-        await vts.request(req)
-        logger.info("Live2D emotion: %s (%ds)", emotion, duration)
-    except Exception as e:
-        logger.warning("Live2D inject failed (VTS not running?): %s", e)
-        return {"status": "skipped", "reason": str(e)}
+    if _emotion_task and not _emotion_task.done():
+        _emotion_task.cancel()
 
-    if _restore_task and not _restore_task.done():
-        _restore_task.cancel()
+    param_names = list(params_dict.keys())
+    param_values = [float(v) for v in params_dict.values()]
+
     if duration > 0:
-        _restore_task = asyncio.create_task(_restore_neutral(duration))
+        _emotion_task = asyncio.create_task(_hold_params(param_names, param_values, duration))
+    else:
+        try:
+            vts = await _get_vts()
+            req = vts.vts_request.requestSetMultiParameterValue(param_names, param_values)
+            await vts.request(req)
+        except Exception as e:
+            logger.warning("Live2D inject failed (VTS not running?): %s", e)
+            return {"status": "skipped", "reason": str(e)}
 
+    logger.info("Live2D emotion: %s (%ds)", emotion, duration)
     return {"emotion": emotion, "duration": duration}
 
 
