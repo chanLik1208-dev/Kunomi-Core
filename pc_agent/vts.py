@@ -110,27 +110,21 @@ async def _get_vts():
 
 
 
-async def _hold_params(param_names: list, param_values: list, duration: float):
-    """Continuously reinject parameters every 50 ms for `duration` seconds, then restore neutral."""
+async def _hold_params(param_names: list, param_values: list):
+    """Continuously reinject parameters every 50 ms until cancelled (next emotion replaces this)."""
     try:
-        deadline = asyncio.get_event_loop().time() + duration
-        while asyncio.get_event_loop().time() < deadline:
+        while True:
             try:
                 await vts_inject(param_names, param_values)
             except Exception:
                 pass
             await asyncio.sleep(0.05)
-    finally:
-        neutral = _PARAMS.get("neutral", {}).get("params", {})
-        if neutral:
-            try:
-                await vts_inject(list(neutral.keys()), [float(v) for v in neutral.values()])
-            except Exception as e:
-                logger.debug("restore neutral failed: %s", e)
+    except asyncio.CancelledError:
+        pass
 
 
 async def set_emotion(emotion: str) -> dict:
-    """Inject Live2D parameter preset for the given emotion."""
+    """Inject Live2D parameter preset, hold until next emotion replaces it."""
     global _emotion_task
 
     preset = _PARAMS.get(emotion)
@@ -138,8 +132,6 @@ async def set_emotion(emotion: str) -> dict:
         return {"status": "skipped", "reason": f"unknown emotion: {emotion}"}
 
     params_dict = preset.get("params", {})
-    duration = preset.get("duration", 3)
-
     if not params_dict:
         return {"status": "skipped", "reason": "no params defined"}
 
@@ -148,18 +140,10 @@ async def set_emotion(emotion: str) -> dict:
 
     param_names = list(params_dict.keys())
     param_values = [float(v) for v in params_dict.values()]
+    _emotion_task = asyncio.create_task(_hold_params(param_names, param_values))
 
-    if duration > 0:
-        _emotion_task = asyncio.create_task(_hold_params(param_names, param_values, duration))
-    else:
-        try:
-            await vts_inject(param_names, param_values)
-        except Exception as e:
-            logger.warning("Live2D inject failed (VTS not running?): %s", e)
-            return {"status": "skipped", "reason": str(e)}
-
-    logger.info("Live2D emotion: %s (%ds)", emotion, duration)
-    return {"emotion": emotion, "duration": duration}
+    logger.info("Live2D emotion: %s (持續)", emotion)
+    return {"emotion": emotion}
 
 
 async def set_expression(name: str, duration_seconds: float = 2.0) -> dict:
