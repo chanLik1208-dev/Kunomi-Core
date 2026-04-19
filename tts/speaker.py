@@ -64,6 +64,35 @@ async def _synthesize_edge(text: str) -> bytes:
     return buf.read()
 
 
+async def _synthesize_say(text: str) -> bytes:
+    """macOS say command — offline fallback, always available."""
+    import asyncio
+    import os
+    import tempfile
+
+    voice = _tts_cfg.get("say_voice", "Mei-Jia")
+    with tempfile.NamedTemporaryFile(suffix=".aiff", delete=False) as f:
+        tmp_aiff = f.name
+    tmp_wav = tmp_aiff.replace(".aiff", ".wav")
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            "say", "-v", voice, "-o", tmp_aiff, text,
+            stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL,
+        )
+        await asyncio.wait_for(proc.wait(), timeout=30)
+        proc2 = await asyncio.create_subprocess_exec(
+            "afconvert", "-f", "WAVE", "-d", "LEI16", tmp_aiff, tmp_wav,
+            stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL,
+        )
+        await asyncio.wait_for(proc2.wait(), timeout=10)
+        with open(tmp_wav, "rb") as f:
+            return f.read()
+    finally:
+        for p in (tmp_aiff, tmp_wav):
+            if os.path.exists(p):
+                os.unlink(p)
+
+
 async def _synthesize_gptsovits(text: str) -> bytes:
     async with httpx.AsyncClient(timeout=30) as client:
         resp = await client.get(_TTS_URL, params={"text": text, "text_language": "zh"})
@@ -79,11 +108,21 @@ async def _synthesize_and_play(text: str) -> None:
             ctype = "audio/wav"
         except Exception as e:
             logger.warning("GPT-SoVITS failed (%s), falling back to edge-tts", e)
+            try:
+                audio = await _synthesize_edge(text)
+                ctype = "audio/mpeg"
+            except Exception as e2:
+                logger.warning("edge-tts failed (%s), falling back to say", e2)
+                audio = await _synthesize_say(text)
+                ctype = "audio/wav"
+    else:
+        try:
             audio = await _synthesize_edge(text)
             ctype = "audio/mpeg"
-    else:
-        audio = await _synthesize_edge(text)
-        ctype = "audio/mpeg"
+        except Exception as e:
+            logger.warning("edge-tts failed (%s), falling back to say", e)
+            audio = await _synthesize_say(text)
+            ctype = "audio/wav"
 
     from urllib.parse import quote
     headers: dict = {"Content-Type": ctype, "X-Subtitle-Text": quote(text)}
