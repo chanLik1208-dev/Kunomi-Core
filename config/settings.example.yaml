@@ -42,16 +42,16 @@ vtube_studio:
   api_url: "ws://192.168.1.XXX:8001" # 4070 PC VTube Studio WebSocket
   plugin_name: "Kunomi-core"
   plugin_developer: "you"
-  idle_motion:                        # Live2D parameter names (Cubism defaults)
-    param_angle_x:    "ParamAngleX"
-    param_angle_y:    "ParamAngleY"
-    param_angle_z:    "ParamAngleZ"
-    param_breath:     "ParamBreath"
-    param_eye_ball_x: "ParamEyeBallX"
-    param_eye_ball_y: "ParamEyeBallY"
-    param_eye_l_open: "ParamEyeLOpen"
-    param_eye_r_open: "ParamEyeROpen"
-    param_mouth_open: "ParamMouthOpenY"
+  idle_motion:                        # VTS face-tracking INPUT parameter names (not Live2D output)
+    param_angle_x:    "FaceAngleX"   # check your VTS parameter list for exact names
+    param_angle_y:    "FaceAngleY"
+    param_angle_z:    "FaceAngleZ"
+    param_breath:     "Breathing"
+    param_eye_ball_x: "EyeRightX"
+    param_eye_ball_y: "EyeRightY"
+    param_eye_l_open: "EyeOpenLeft"
+    param_eye_r_open: "EyeOpenRight"
+    param_mouth_open: "MouthOpen"
 
 pc_agent:
   host: "http://192.168.1.XXX:8100"
