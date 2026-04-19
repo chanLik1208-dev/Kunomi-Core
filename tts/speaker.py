@@ -39,7 +39,7 @@ async def _worker():
             delay = random.uniform(1.0, 3.0)
             await asyncio.sleep(delay)
         except Exception as e:
-            logger.error("TTS worker error: %s", e)
+            logger.exception("TTS worker error: %s", e)
         finally:
             _queue.task_done()
 
