@@ -39,7 +39,7 @@ def set_mouth(value: float | None) -> None:
     _mouth_value = value
 
 
-async def _loop(get_vts) -> None:
+async def _loop(_get_vts_unused=None) -> None:
     t = 0.0
     blink_timer = random.uniform(3.0, 6.0)
     blink_state = 0.0   # 0 = open, 1 = closed
@@ -94,18 +94,19 @@ async def _loop(get_vts) -> None:
         }
 
         try:
-            vts = await get_vts()
-            names = list(params.keys())
-            values = list(params.values())
-            req = vts.vts_request.requestSetMultiParameterValue(names, values)
-            await vts.request(req)
+            from pc_agent.vts import vts_request, _get_vts
+            vts = await _get_vts()
+            req = vts.vts_request.requestSetMultiParameterValue(
+                list(params.keys()), list(params.values())
+            )
+            await vts_request(req)
         except Exception:
             await asyncio.sleep(1.0)  # back off on VTS error
 
 
-def start(get_vts) -> None:
+def start() -> None:
     global _task
     if _task and not _task.done():
         return
-    _task = asyncio.create_task(_loop(get_vts))
+    _task = asyncio.create_task(_loop())
     logger.info("Idle motion loop started")

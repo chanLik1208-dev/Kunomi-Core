@@ -34,8 +34,7 @@ async def on_startup():
     if _config.get("vtube_studio", {}).get("api_url") or _config.get("vtube_studio", {}).get("port"):
         try:
             from pc_agent.idle_motion import start as start_idle
-            from pc_agent.vts import _get_vts
-            start_idle(_get_vts)
+            start_idle()
             logger.info("Idle motion loop 已啟動")
         except Exception as e:
             logger.warning("Idle motion 啟動失敗（VTS 未連線？）: %s", e)

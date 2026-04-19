@@ -40,6 +40,21 @@ _EXPR_MAP: dict = yaml.safe_load(
 
 _vts_client = None
 _emotion_task: asyncio.Task | None = None
+_vts_lock: asyncio.Lock | None = None
+
+
+def _get_lock() -> asyncio.Lock:
+    global _vts_lock
+    if _vts_lock is None:
+        _vts_lock = asyncio.Lock()
+    return _vts_lock
+
+
+async def vts_request(req: dict) -> dict:
+    """Thread-safe wrapper: serialize all VTS WebSocket calls."""
+    async with _get_lock():
+        vts = await _get_vts()
+        return await vts.request(req)
 
 
 async def _get_vts():
@@ -78,7 +93,7 @@ async def _hold_params(param_names: list, param_values: list, duration: float):
             try:
                 vts = await _get_vts()
                 req = vts.vts_request.requestSetMultiParameterValue(param_names, param_values)
-                await vts.request(req)
+                await vts_request(req)
             except Exception:
                 pass
             await asyncio.sleep(0.05)
@@ -90,7 +105,7 @@ async def _hold_params(param_names: list, param_values: list, duration: float):
                 req = vts.vts_request.requestSetMultiParameterValue(
                     list(neutral.keys()), [float(v) for v in neutral.values()]
                 )
-                await vts.request(req)
+                await vts_request(req)
             except Exception as e:
                 logger.debug("restore neutral failed: %s", e)
 
@@ -121,7 +136,7 @@ async def set_emotion(emotion: str) -> dict:
         try:
             vts = await _get_vts()
             req = vts.vts_request.requestSetMultiParameterValue(param_names, param_values)
-            await vts.request(req)
+            await vts_request(req)
         except Exception as e:
             logger.warning("Live2D inject failed (VTS not running?): %s", e)
             return {"status": "skipped", "reason": str(e)}
@@ -139,7 +154,7 @@ async def set_expression(name: str, duration_seconds: float = 2.0) -> dict:
     try:
         vts = await _get_vts()
         req = vts.vts_request.requestTriggerHotKey(hotkey_id)
-        await vts.request(req)
+        await vts_request(req)
         logger.info("VTS hotkey triggered: %s (%s)", name, hotkey_id)
     except Exception as e:
         logger.warning("VTS hotkey failed (VTS not running?): %s", e)
