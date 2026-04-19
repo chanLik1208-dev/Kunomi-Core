@@ -5,7 +5,7 @@ Single master loop at 50ms:
 - Computes idle values (breathing, head sway, eye drift, blink)
 - Smoothly blends toward emotion target when emotion is active
 - Blends back to idle after emotion duration expires
-- Drives ParamMouthOpenY via lip sync during TTS playback
+- Drives MouthOpen via lip sync during TTS playback
 """
 import asyncio
 import logging
@@ -29,15 +29,15 @@ _P_EYE_L_OPEN = _idle_cfg.get("param_eye_l_open", "EyeOpenLeft")
 _P_EYE_R_OPEN = _idle_cfg.get("param_eye_r_open", "EyeOpenRight")
 _P_MOUTH_OPEN = _idle_cfg.get("param_mouth_open",  "MouthOpen")
 
-TICK        = 0.05   # 50 ms
-BLEND_SPEED = 5.0    # blend units/second (0→1 in 0.2s)
+TICK        = 0.05  # 50 ms
+BLEND_SPEED = 5.0   # blend units/second → 0→1 in 0.2s
 
 _task: asyncio.Task | None = None
 
-# Emotion state
+# Emotion state (written from set_emotion, read by _loop)
 _emotion_params: dict[str, float] = {}
 _emotion_blend_target: float = 0.0
-_emotion_expire_at: float = 0.0   # asyncio monotonic time
+_emotion_expire_at: float = 0.0
 
 # Lip sync
 _mouth_value: float | None = None
@@ -48,18 +48,16 @@ def set_mouth(value: float | None) -> None:
     _mouth_value = value
 
 
-def set_emotion(params: dict[str, float], duration: float) -> None:
-    """Set emotion target params and start blend-in. duration=0 means hold forever."""
+def set_emotion(params: dict, duration: float) -> None:
+    """Blend into emotion. duration=0 holds forever until next set_emotion()."""
     global _emotion_params, _emotion_blend_target, _emotion_expire_at
     _emotion_params = {k: float(v) for k, v in params.items()}
     _emotion_blend_target = 1.0
-    loop = asyncio.get_event_loop()
-    _emotion_expire_at = (loop.time() + duration) if duration > 0 else float("inf")
-
-
-def clear_emotion() -> None:
-    global _emotion_blend_target
-    _emotion_blend_target = 0.0
+    try:
+        loop = asyncio.get_event_loop()
+        _emotion_expire_at = (loop.time() + duration) if duration > 0 else float("inf")
+    except RuntimeError:
+        _emotion_expire_at = float("inf")
 
 
 async def _loop() -> None:
@@ -74,18 +72,17 @@ async def _loop() -> None:
     while True:
         await asyncio.sleep(TICK)
         t += TICK
+        blink_timer -= TICK
 
         # ── Check emotion expiry ─────────────────────────────────────────────
-        loop = asyncio.get_event_loop()
-        if loop.time() >= _emotion_expire_at and _emotion_blend_target > 0.0:
+        now = asyncio.get_event_loop().time()
+        if now >= _emotion_expire_at and _emotion_blend_target > 0.0:
             _emotion_blend_target = 0.0
 
         # ── Smooth blend ─────────────────────────────────────────────────────
         step = BLEND_SPEED * TICK
-        if blend < _emotion_blend_target:
-            blend = min(blend + step, _emotion_blend_target)
-        else:
-            blend = max(blend - step, _emotion_blend_target)
+        blend = blend + step if blend < _emotion_blend_target else blend - step
+        blend = max(0.0, min(1.0, blend))
 
         # ── Idle values ───────────────────────────────────────────────────────
         breath = (math.sin(t * 2 * math.pi * 0.25) + 1) / 2
@@ -100,7 +97,6 @@ async def _loop() -> None:
                  + math.sin(t * 2 * math.pi * 0.09) * 0.15)
         eye_y = math.sin(t * 2 * math.pi * 0.06) * 0.25
 
-        # Blink
         if blink_timer <= 0 and not blink_closing:
             blink_closing = True
         if blink_closing:
@@ -111,7 +107,6 @@ async def _loop() -> None:
             blink_state = max(blink_state - TICK / 0.12, 0.0)
             if blink_state <= 0.0:
                 blink_timer = random.uniform(3.0, 7.0)
-        blink_timer -= TICK
         eye_open = 1.0 - blink_state
 
         mouth = _mouth_value if _mouth_value is not None else 0.0
@@ -130,18 +125,17 @@ async def _loop() -> None:
 
         # ── Blend idle + emotion ──────────────────────────────────────────────
         all_keys = set(idle.keys()) | set(_emotion_params.keys())
-        final: dict[str, float] = {}
-        for k in all_keys:
-            iv = idle.get(k, 0.0)
-            ev = _emotion_params.get(k, iv)
-            final[k] = iv + (ev - iv) * blend
+        final: dict[str, float] = {
+            k: idle.get(k, 0.0) + (_emotion_params.get(k, idle.get(k, 0.0)) - idle.get(k, 0.0)) * blend
+            for k in all_keys
+        }
 
         # ── Inject ───────────────────────────────────────────────────────────
         try:
             from pc_agent.vts import vts_inject
             await vts_inject(list(final.keys()), list(final.values()))
         except Exception:
-            await asyncio.sleep(1.0)
+            await asyncio.sleep(0.5)
 
 
 def start() -> None:

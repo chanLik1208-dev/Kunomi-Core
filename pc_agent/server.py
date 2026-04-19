@@ -31,13 +31,9 @@ async def on_startup():
         start_asr()
         logger.info("ASR 按鍵發話已啟動")
 
-    if _config.get("vtube_studio", {}).get("api_url") or _config.get("vtube_studio", {}).get("port"):
-        try:
-            from pc_agent.idle_motion import start as start_idle
-            start_idle()
-            logger.info("Idle motion loop 已啟動")
-        except Exception as e:
-            logger.warning("Idle motion 啟動失敗（VTS 未連線？）: %s", e)
+    from pc_agent.idle_motion import start as start_idle
+    start_idle()
+    logger.info("Idle motion loop 已啟動")
 
 
 async def verify_key(request: Request):
